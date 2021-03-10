@@ -204,13 +204,13 @@ def main(settings, screen): # TODO: redesign fades.
 
     # EFFECTS SECTION - controls 1-9.
     # make instances of classes in subeffects.py in effects.
-    effects = [sub_effects.Spotlight(200), 
-                sub_effects.Stars(400, 1, 4),
+    effects = [ sub_effects.Stars(400, 1, 4),
                 sub_effects.SweepSprite("large_frozen_earth.png", (settings.get_center()), 1, 400, 2),  
                 sub_effects.ArcSprite("large_frozen_earth.png", (screen.size[0]//2, 300), 0, 200, 0.5, 144),
                 sub_effects.ArcSprite("large_frozen_earth.png", (screen.size[0]//2, 300), 0, 200, 0.5, 216),
                 sub_effects.ArcSprite("large_frozen_earth.png", (screen.size[0]//2, 300), 0, 200, 0.5, 288),
-                sub_effects.Sprite("large_frozen_earth.png", (0,0), 10, 1)]
+                sub_effects.Sprite("large_frozen_earth.png", (0,0), 10, 1),
+                sub_effects.Spotlight(200)]
 
     displays, pos = create_displays(settings)
     text = Text()
@@ -255,6 +255,11 @@ def main(settings, screen): # TODO: redesign fades.
             if e.type == pygame.QUIT:
                 exit()
 
+            elif e.type == pygame.MOUSEBUTTONDOWN: # focus spotlight on click.
+                for i, ef in enumerate(effects):
+                    if ef.__class__.__name__ == "Spotlight":
+                        control_index = i
+
             elif e.type == pygame.KEYDOWN:
 
                 if e.key == pygame.K_ESCAPE:
@@ -297,7 +302,7 @@ def main(settings, screen): # TODO: redesign fades.
                         if effects[e.key-49].opacity: # if is on.
                             control_index = e.key - 49
                     except Exception as e:
-                        print("Not enough items in effects list (or ", e + ")")
+                        print(f"Not enough items in effects list: {e}")
 
                 # cycle through controllable surfaces
                 elif e.key in (pygame.K_PAGEDOWN, pygame.K_PAGEUP) and control_index is not None:
