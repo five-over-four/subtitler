@@ -22,7 +22,7 @@ class Settings:
         self.x = ceil(self.resolution[0] / self.img_width) # number of tiles.
         self.y = ceil(self.resolution[1] / self.img_height)
         self.center = self.get_center()
-        self.fps = 60 # set to whatever. most settings are independent of it.
+        self.fps = 144 # set to whatever. most settings are independent of it.
         self.rng_factor = (self.fps * self.speed) // 10 # how often images switch randomly.
         self.background = None
         self.next_background(1) # 1 means 'forward', -1 'backward'.
@@ -77,7 +77,9 @@ class Text:
         self.box_surfs = []
         self.text_rects = []
         self.box_rects = []
-        self.alpha = 0
+        self.text_alpha = 0
+        self.box_alpha = 0
+        self.max_alpha = 230 # for boxes.
         self.speaker_height = 120
 
     def update_font_size(self): # linear function: font_size is 40 at width 1500, 60 at 2000.
@@ -159,7 +161,8 @@ def load_next_directory(text, settings, screen): # modifies relevant objects.
     # then make the changes to Text()
     text.read_messages()
     text.index = 0
-    text.alpha = 0
+    text.text_alpha = 0
+    text.box_alpha = 0
     
 def create_displays(settings, screen, renderer): # tiling via x-tile * y-tile DisplayFrame objects.
     displays = [DisplayFrame(settings, screen, renderer) for x in range(settings.x * settings.y)]
@@ -179,7 +182,7 @@ def main(settings, screen): # todo: redesign blitting, fades, sdl2 functionality
     # make instances of classes in subeffects.py in effects. on keyboard, 1 corresponds to first, 2 to second etc.
     effects = [sdl2_effects.Spotlight(200, settings.resolution, renderer), 
                 sdl2_effects.Stars(screen, 400, 1, 4, renderer),
-                sdl2_effects.ArcSprite("large_frozen_earth.png", (screen.size[0]//2, 300), 1, 400, 1, 2.5, renderer),
+                sdl2_effects.ArcSprite("STUPID.png", settings.center, 1, 400, 0.5, 2.5, renderer),
                 sdl2_effects.SweepSprite("large_frozen_earth.png", (settings.get_center()), 1, 400, 2, renderer),  
                 sdl2_effects.ArcSprite("large_frozen_earth.png", (screen.size[0]//2, 300), 0, 200, 0.5, 144, renderer),
                 sdl2_effects.ArcSprite("large_frozen_earth.png", (screen.size[0]//2, 300), 0, 200, 0.5, 216, renderer),
@@ -216,13 +219,13 @@ def main(settings, screen): # todo: redesign blitting, fades, sdl2 functionality
                 ef.TEXTURE.draw(dstrect=ef.rect, angle=ef.theta)
 
         # draw text and boxes
-        if text.alpha > 0:
+        if text.text_alpha > 0:
             texts = text.give_textures(renderer)
             for a,b in zip(texts[2], texts[3]): # boxes
-                a.alpha = text.alpha
+                a.alpha = text.box_alpha
                 a.draw(dstrect=b.topleft)
             for c,d in zip(texts[0], texts[1]): # texts
-                c.alpha = text.alpha
+                c.alpha = text.text_alpha
                 c.draw(dstrect=d.topleft)
 
         # EVENT HANDLING SECTION
@@ -259,7 +262,8 @@ def main(settings, screen): # todo: redesign blitting, fades, sdl2 functionality
                 elif e.key == pygame.K_RETURN: # reset to the first line.
                     text.index = 0
                     if not text_show:
-                        text.alpha = 0
+                        text.text_alpha = 0
+                        text.box_alpha = 0
                         text.next_message()
                     text_show ^= True
                     fade_time = 1 # access fades
@@ -289,7 +293,8 @@ def main(settings, screen): # todo: redesign blitting, fades, sdl2 functionality
                 # show next text line / hide current one
                 elif e.key in (pygame.K_z, pygame.K_x, pygame.K_c):
                     if not text_show:
-                        text.alpha = 0
+                        text.text_alpha = 0
+                        text.box_alpha = 0
                         text.next_message()
                     text_show ^= True
                     fade_time = 1 # access fades.
@@ -306,10 +311,12 @@ def main(settings, screen): # todo: redesign blitting, fades, sdl2 functionality
         # FADES FOR TEXT AND BOXES. (todo: build into classes.)
         if fade_time > 0 and text_show: # fade in
             fade_time += 1
-            text.alpha += 255 // fade_duration # adjust the 255 if you want a different *max* opacity.
+            text.text_alpha += 255 // fade_duration
+            text.box_alpha += text.max_alpha // fade_duration
         elif fade_time > 0 and not text_show: # fade out
             fade_time += 1
-            text.alpha -= 255 // fade_duration
+            text.text_alpha -= 255 // fade_duration
+            text.box_alpha -= text.max_alpha // fade_duration
 
         if fade_time > fade_duration: # fade has finished.
             fade_time = 0
