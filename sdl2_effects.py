@@ -134,17 +134,18 @@ class Stars:
         self.opacity += self.fade_speed
         print(f"Stars is {self.fade_speed > 0}")
 
-class Spotlight: # i don't know how to get this to work with textures yet.
+class Spotlight: # kinda hacky and renders a new texture every frame.
     def __init__(self, radius, resolution, renderer):
+        self.renderer = renderer
         self.cover = pygame.Surface(resolution)
         self.cover.fill(0)
         self.rect = (0,0)
         self.theta = 0
         self.cover.set_colorkey((255,255,255))
         self.pos = (0,0)
-        pygame.draw.circle(self.cover, (255,255,255), self.pos, 200)
-        self.TEXTURE = pygame._sdl2.Texture.from_surface(renderer, self.cover)
         self.radius = radius
+        pygame.draw.circle(self.cover, (255,255,255), self.pos, self.radius)
+        self.TEXTURE = pygame._sdl2.Texture.from_surface(renderer, self.cover)
         self.opacity = 0
 
     def update(self):
@@ -152,9 +153,10 @@ class Spotlight: # i don't know how to get this to work with textures yet.
             self.cover.fill(0)
             self.pos = pygame.mouse.get_pos()
             pygame.draw.circle(self.cover, (255,255,255), self.pos, self.radius)
+            self.TEXTURE = pygame._sdl2.Texture.from_surface(self.renderer, self.cover)
 
     def resize(self, order, renderer):
-        self.radius += order
+        self.radius += order * 100
 
     def toggle(self, screen):
         self.opacity = 255 if self.opacity == 0 else 0

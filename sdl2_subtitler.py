@@ -177,7 +177,8 @@ def main(settings, screen): # todo: redesign blitting, fades, sdl2 functionality
 
     # EFFECTS SECTION - experimental and fiddly. controls 1-9 for now.
     # make instances of classes in subeffects.py in effects. on keyboard, 1 corresponds to first, 2 to second etc.
-    effects = [sdl2_effects.Stars(screen, 400, 1, 4, renderer), \
+    effects = [sdl2_effects.Spotlight(200, settings.resolution, renderer), 
+                sdl2_effects.Stars(screen, 400, 1, 4, renderer),
                 sdl2_effects.ArcSprite("large_frozen_earth.png", (screen.size[0]//2, 300), 1, 400, 1, 2.5, renderer),
                 sdl2_effects.SweepSprite("large_frozen_earth.png", (settings.get_center()), 1, 400, 2, renderer),  
                 sdl2_effects.ArcSprite("large_frozen_earth.png", (screen.size[0]//2, 300), 0, 200, 0.5, 144, renderer),
@@ -343,16 +344,16 @@ def main(settings, screen): # todo: redesign blitting, fades, sdl2 functionality
             elif pressed[pygame.K_j]:
                 direction = (-control_speed,0)
     
-        # resize things that are resizable.
-        for effect in effects:
-            if hasattr(effect, "resize") and effects[control_index] == effect:
-                effect.resize(resize_factor, renderer)
+        # resize selected control surface.
+        for ef in effects:
+            if hasattr(ef, "resize") and effects[control_index] == ef:
+                ef.resize(resize_factor, renderer)
                 break
 
         # move things
-        for effect in effects:
-            if hasattr(effect, "move") and effects[control_index] == effect:
-                effect.move(direction)
+        for ef in effects:
+            if hasattr(ef, "move") and effects[control_index] == ef:
+                ef.move(direction)
                 break
 
         renderer.target = None
