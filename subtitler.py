@@ -5,9 +5,16 @@ from random import randint, choice
 from PIL import Image
 from itertools import product
 from math import ceil
-import subeffects
+import sub_effects
 
 pygame.init()
+
+# every class has functions with a need to access these.
+# they are also singletons, so this makes *some* sense.
+class Globals:
+    settings = None
+    screen = None
+    renderer = None
 
 class Settings:
 
@@ -44,36 +51,36 @@ class Settings:
                 self.bg_index = (self.bg_index + direction) % len(self.backgrounds)
                 self.pygame_background = pygame.image.load(self.hub_path + "backgrounds/" + self.backgrounds[self.bg_index])
 
-    def render_background(self, renderer):
-        self.background = pygame._sdl2.Texture.from_surface(renderer, self.pygame_background)
+    def render_background(self):
+        self.background = pygame._sdl2.Texture.from_surface(Globals.renderer, self.pygame_background)
 
 class DisplayFrame:
 
     TEXTURES = []
 
-    def __init__(self, settings, screen, renderer):
-        self.index = randint(0,len(settings.images)-1)
+    def __init__(self):
+        self.index = randint(0,len(Globals.settings.images)-1)
         if not DisplayFrame.TEXTURES: # first instance loads imageset.
-            DisplayFrame.load_new_imageset(renderer)
+            DisplayFrame.load_new_imageset()
 
     def give_textures(self): # load image and draw.
-        if randint(0,settings.rng_factor) == 0: # 10 -> 1 flip/sec, 100 -> 0.01 flips/sec.
-            self.index = randint(0,len(settings.images) - 1)
+        if randint(0,Globals.settings.rng_factor) == 0: # 10 -> 1 flip/sec, 100 -> 0.01 flips/sec.
+            self.index = randint(0,len(Globals.settings.images) - 1)
         return self.TEXTURES[self.index]
 
     @classmethod
-    def load_new_imageset(self, renderer):
-        pygame_images = [pygame.image.load(settings.path + "/" + settings.images[i]) for i in range(0, len(settings.images))]
-        DisplayFrame.TEXTURES = [pygame._sdl2.Texture.from_surface(renderer, image) for image in pygame_images]
+    def load_new_imageset(self):
+        pygame_images = [pygame.image.load(Globals.settings.path + "/" + Globals.settings.images[i]) for i in range(0, len(Globals.settings.images))]
+        DisplayFrame.TEXTURES = [pygame._sdl2.Texture.from_surface(Globals.renderer, image) for image in pygame_images]
 
 class Text:
 
-    def __init__(self, settings, screen):
+    def __init__(self):
         self.update_font_size()
         self.read_messages() # list of all lines in directory.txt.
         self.index = 0 # current line number in directory.txt.
         self.next_message()
-        self.text_surfs = []
+        self.text_surfs = [] # rewrite into dict format surf: rect or so.
         self.box_surfs = []
         self.text_rects = []
         self.box_rects = []
@@ -83,9 +90,9 @@ class Text:
         self.speaker_height = 120
 
     def update_font_size(self): # linear function: font_size is 40 at width 1500, 60 at 2000.
-        self.font_size = (screen.size[0] - 500) // 25
+        self.font_size = (Globals.screen.size[0] - 500) // 25
 
-    def load_surfaces(self): # this is a bit unwieldy.
+    def load_surfaces(self): # this is a bit unwieldy. rewrite.
         if not self.message:
             return
         self.update_font_size()
@@ -113,10 +120,10 @@ class Text:
             self.box_surfs = [text_box]
             self.text_rects = [text_surf.get_rect(center=(x,y))]
             self.box_rects = [text_box.get_rect(center=(x,y))]
+        self.text_textures = [pygame._sdl2.Texture.from_surface(Globals.renderer, text_surf) for text_surf in self.text_surfs]
+        self.box_textures = [pygame._sdl2.Texture.from_surface(Globals.renderer, box_surf) for box_surf in self.box_surfs]
 
-    def give_textures(self, renderer):
-        self.text_textures = [pygame._sdl2.Texture.from_surface(renderer, text_surf) for text_surf in self.text_surfs]
-        self.box_textures = [pygame._sdl2.Texture.from_surface(renderer, box_surf) for box_surf in self.box_surfs]
+    def give_textures(self):
         return (self.text_textures, self.text_rects, self.box_textures, self.box_rects)
         
     def read_messages(self): # find dirname.txt or create one if missing.
@@ -142,8 +149,16 @@ class Text:
             self.font_size -= 1
             self.font = pygame.font.SysFont("courier", self.font_size)
 
-def load_next_directory(text, settings, screen): # modifies relevant objects.
+    def purge_data(self):
+        self.text_surfs.clear()
+        self.box_surfs.clear()
+        self.text_rects.clear()
+        self.box_rects.clear()
+        self.text_textures.clear()
+        self.box_textures.clear()
 
+def load_next_directory(text, settings): # modifies relevant objects.
+    text.purge_data()
     # first load the new files into Settings(), skipping empty directories.
     while True:
         settings.current_index = (settings.current_index + 1) % len(settings.directory_list)
@@ -157,45 +172,51 @@ def load_next_directory(text, settings, screen): # modifies relevant objects.
             break
         except:
             continue
-
     # then make the changes to Text()
     text.read_messages()
     text.index = 0
     text.text_alpha = 0
     text.box_alpha = 0
     
-def create_displays(settings, screen, renderer): # tiling via x-tile * y-tile DisplayFrame objects.
-    displays = [DisplayFrame(settings, screen, renderer) for x in range(settings.x * settings.y)]
-    DisplayFrame.load_new_imageset(renderer)
+def create_displays(settings): # tiling via x-tile * y-tile DisplayFrame objects.
+    displays = [DisplayFrame() for x in range(settings.x * settings.y)]
+    DisplayFrame.load_new_imageset()
     offset = product([x for x in range(settings.x)], [x for x in range(settings.y)])
     pos = [(0 + off[0] * settings.img_width, 0 + off[1] * settings.img_height) for off in offset]
     return displays, pos
 
 def main(settings, screen): # todo: redesign blitting, fades, sdl2 functionality.
 
+    # pygame components, including SDL2 compliant rendering.
     clock = pygame.time.Clock()
     renderer = pygame._sdl2.Renderer(screen, vsync=False)
     buffer = pygame._sdl2.Texture(renderer, settings.resolution, target=True)
     buffer.blend_mode = 1
 
+    # pass global parts into sub_effects.py and Globals for simpler function calls (bad idea?)
+    sub_effects.renderer = renderer
+    sub_effects.settings = settings
+    sub_effects.screen = screen
+    Globals.renderer = renderer
+    Globals.settings = settings
+    Globals.screen = screen
+
     # EFFECTS SECTION - experimental and fiddly. controls 1-9 for now.
     # make instances of classes in subeffects.py in effects. on keyboard, 1 corresponds to first, 2 to second etc.
-    effects = [subeffects.Spotlight(200, settings.resolution, renderer), 
-                subeffects.Stars(screen, 400, 1, 4, renderer),
-                subeffects.SweepSprite("large_frozen_earth.png", (settings.get_center()), 1, 400, 2, renderer),  
-                subeffects.ArcSprite("large_frozen_earth.png", (screen.size[0]//2, 300), 0, 200, 0.5, 144, renderer),
-                subeffects.ArcSprite("large_frozen_earth.png", (screen.size[0]//2, 300), 0, 200, 0.5, 216, renderer),
-                subeffects.ArcSprite("large_frozen_earth.png", (screen.size[0]//2, 300), 0, 200, 0.5, 288, renderer),
-                subeffects.Sprite("large_frozen_earth.png", (0,0), 10, 1, renderer)]
+    effects = [sub_effects.Spotlight(200), 
+                sub_effects.Stars(400, 1, 4),
+                sub_effects.SweepSprite("large_frozen_earth.png", (settings.get_center()), 1, 400, 2),  
+                sub_effects.ArcSprite("large_frozen_earth.png", (screen.size[0]//2, 300), 0, 200, 0.5, 144),
+                sub_effects.ArcSprite("large_frozen_earth.png", (screen.size[0]//2, 300), 0, 200, 0.5, 216),
+                sub_effects.ArcSprite("large_frozen_earth.png", (screen.size[0]//2, 300), 0, 200, 0.5, 288),
+                sub_effects.Sprite("large_frozen_earth.png", (0,0), 10, 1)]
 
-    displays, pos = create_displays(settings, screen, renderer)
-    text = Text(settings, screen)
+    displays, pos = create_displays(settings)
+    text = Text()
     text.index = 0
     text_show = False
     fade_time = 0 # this acts as both a boolean and counter.
     fade_duration = settings.fps // 5 # 1/x seconds.
-
-    # for movable effects, like Sprite(). control_index tells which effect is moved.
     control_speed = 5
     control_index = 0
 
@@ -211,7 +232,7 @@ def main(settings, screen): # todo: redesign blitting, fades, sdl2 functionality
         if settings.bg_on:
             settings.background.draw(dstrect=(0,0))
 
-        # draw special effects on top
+        # draw effects on top
         for ef in effects:
             ef.update()
             if ef.opacity > 0:
@@ -219,7 +240,7 @@ def main(settings, screen): # todo: redesign blitting, fades, sdl2 functionality
 
         # draw text and boxes
         if text.text_alpha > 0:
-            texts = text.give_textures(renderer)
+            texts = text.give_textures()
             for a,b in zip(texts[2], texts[3]): # boxes
                 a.alpha = text.box_alpha
                 a.draw(dstrect=b.topleft)
@@ -243,19 +264,20 @@ def main(settings, screen): # todo: redesign blitting, fades, sdl2 functionality
 
                 elif e.key == pygame.K_b: # enable background (transparent overlay)
                     settings.bg_on ^= True
-                    settings.render_background(renderer)
+                    if not settings.background:
+                        settings.render_background()
 
                 elif e.key == pygame.K_LEFT:
                     settings.next_background(-1)
-                    settings.render_background(renderer)
+                    settings.render_background()
 
                 elif e.key == pygame.K_RIGHT:
                     settings.next_background(1)
-                    settings.render_background(renderer)
+                    settings.render_background()
 
                 elif e.key == pygame.K_d: # switch directory.
-                    load_next_directory(text, settings, screen)
-                    displays, pos = create_displays(settings, screen, renderer)
+                    load_next_directory(text, settings)
+                    displays, pos = create_displays(settings)
                     text_show = False
 
                 elif e.key == pygame.K_RETURN: # reset to the first line.
@@ -270,11 +292,11 @@ def main(settings, screen): # todo: redesign blitting, fades, sdl2 functionality
                 # effect toggling. 1 to 9. 1 corresponds to 49.
                 elif e.key in {x+49 for x in range(0,10)} and effects:
                     try:
-                        effects[e.key-49].toggle(screen)
+                        effects[e.key-49].toggle()
                         if effects[e.key-49].opacity: # if is on.
                             control_index = e.key - 49
                     except Exception as e:
-                        print("Not enough items in effects list.", e)
+                        print("Not enough items in effects list (or ", e + ")")
 
                 # cycle through controllable surfaces
                 elif e.key in (pygame.K_PAGEDOWN, pygame.K_PAGEUP) and control_index is not None:
@@ -302,7 +324,7 @@ def main(settings, screen): # todo: redesign blitting, fades, sdl2 functionality
             elif e.type == pygame.VIDEORESIZE:
                 settings.x = ceil(screen.size[0] / settings.img_width)
                 settings.y = ceil(screen.size[1] / settings.img_height)
-                displays, pos = create_displays(settings, screen, renderer)
+                displays, pos = create_displays(settings)
                 settings.resolution = screen.size
                 buffer = pygame._sdl2.Texture(renderer, settings.resolution, target=True)
                 text.update_font_size()
@@ -353,7 +375,7 @@ def main(settings, screen): # todo: redesign blitting, fades, sdl2 functionality
         # resize selected control surface.
         for ef in effects:
             if hasattr(ef, "resize") and effects[control_index] == ef:
-                ef.resize(resize_factor, renderer)
+                ef.resize(resize_factor)
                 break
 
         # move things

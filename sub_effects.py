@@ -5,11 +5,17 @@ from math import cos, sin, pi
 
 effects = os.path.dirname(os.path.realpath(__file__)) + "/effects/"
 
-# blit image based on a *center* coordinate. controllable with ijkl.
-# for now: if spinning, cannot resize. this is a design flaw.
+# set these from the main file in subtitler.main().
+renderer = None
+settings = None
+screen = None
+
+def returnTest():
+    return test
+
 class Sprite:
 
-    def __init__(self, item, pos, fade_speed, spin_speed, renderer):
+    def __init__(self, item, pos, fade_speed, spin_speed):
         self.img_ref = pygame.image.load(effects + item) # reference image
         self.size = self.img_ref.get_size()
         self.TEXTURE = pygame._sdl2.Texture.from_surface(renderer, self.img_ref)
@@ -39,7 +45,7 @@ class Sprite:
         self.pos = self.pos[0] + diff[0], self.pos[1] + diff[1]
         self.rect.center = self.pos
 
-    def resize(self, order, renderer):
+    def resize(self, order):
         if order < 0 and self.scale <= 0.01: # don't crash by shrinking negative.
             return
         elif order == 0:
@@ -53,15 +59,16 @@ class Sprite:
     def automate_movement(self): # for inheritance.
         pass
 
-    def toggle(self, *args):
+    def toggle(self):
         self.fade_speed *= -1
         self.opacity += self.fade_speed # certain values may overshoot 255
         print(f"{self.__class__.__name__} is {self.fade_speed > 0}")
 
 # animates a sprite on a circular path while spinning.
 class ArcSprite(Sprite):
-    def __init__(self, item, origin, spin_speed, radius, speed, start_angle, renderer):
-        super().__init__(item, origin, 10, spin_speed, renderer)
+
+    def __init__(self, item, origin, spin_speed, radius, speed, start_angle):
+        super().__init__(item, origin, 10, spin_speed)
         self.origin = origin
         self.radius = radius
         self.speed = speed
@@ -78,8 +85,8 @@ class ArcSprite(Sprite):
         self.rect.center = self.pos
 
 class SweepSprite(Sprite): # back and forth.
-    def __init__(self, item, center, rate, width, spin_speed, renderer):
-        super().__init__(item, center, 10, spin_speed, renderer)
+    def __init__(self, item, center, rate, width, spin_speed):
+        super().__init__(item, center, 10, spin_speed)
         self.width = width
         self.center = center
         self.rate = rate
@@ -92,8 +99,7 @@ class SweepSprite(Sprite): # back and forth.
 # draw random-sized small squares at random positions.
 class Stars:
 
-    def __init__(self, screen, n, minsize, maxsize, renderer):
-        self.renderer = renderer
+    def __init__(self, n, minsize, maxsize):
         self.rect = (0,0)
         self.theta = 0
         self.opacity = 0
@@ -103,9 +109,9 @@ class Stars:
         self.n = n
         self.dimensions = screen.size
         self.surf = pygame.Surface(self.dimensions)
-        self.create_stars(screen, self.renderer)
+        self.create_stars()
 
-    def create_stars(self, screen, renderer):
+    def create_stars(self):
         self.surf.fill(0)
         self.surf.set_colorkey((0,0,0))
         self.stars = []
@@ -114,7 +120,7 @@ class Stars:
             self.stars.append({"position": (randint(0,self.dimensions[0]), randint(0,self.dimensions[1])), "size": size})
         for star in self.stars:
             pygame.draw.circle(self.surf, (255,255,255), star["position"], star["size"])
-        self.TEXTURE = pygame._sdl2.Texture.from_surface(self.renderer, self.surf)
+        self.TEXTURE = pygame._sdl2.Texture.from_surface(renderer, self.surf)
 
     def update(self):
         if self.opacity == 0:
@@ -126,18 +132,18 @@ class Stars:
             self.opacity = 0
         self.TEXTURE.alpha = self.opacity
 
-    def toggle(self, screen):
+    def toggle(self):
         if self.opacity == 0 and self.surf.get_size() != screen.size:
             self.dimensions = screen.size
-            self.create_stars(screen, self.renderer)
+            self.create_stars()
         self.fade_speed *= -1
         self.opacity += self.fade_speed
         print(f"Stars is {self.fade_speed > 0}")
 
 class Spotlight: # kinda hacky and renders a new texture every frame.
-    def __init__(self, radius, resolution, renderer):
-        self.renderer = renderer
-        self.cover = pygame.Surface(resolution)
+
+    def __init__(self, radius):
+        self.cover = pygame.Surface(settings.resolution)
         self.cover.fill(0)
         self.rect = (0,0)
         self.theta = 0
@@ -153,11 +159,11 @@ class Spotlight: # kinda hacky and renders a new texture every frame.
             self.cover.fill(0)
             self.pos = pygame.mouse.get_pos()
             pygame.draw.circle(self.cover, (255,255,255), self.pos, self.radius)
-            self.TEXTURE = pygame._sdl2.Texture.from_surface(self.renderer, self.cover)
+            self.TEXTURE = pygame._sdl2.Texture.from_surface(renderer, self.cover)
 
-    def resize(self, order, renderer):
+    def resize(self, order):
         self.radius += order * 100
 
-    def toggle(self, screen):
+    def toggle(self):
         self.opacity = 255 if self.opacity == 0 else 0
         print(f"Spotlight is {self.opacity > 0}")
