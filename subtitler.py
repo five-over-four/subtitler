@@ -150,12 +150,13 @@ class Text:
             self.font = pygame.font.SysFont("courier", self.font_size)
 
     def purge_data(self):
-        self.text_surfs.clear()
-        self.box_surfs.clear()
-        self.text_rects.clear()
-        self.box_rects.clear()
-        self.text_textures.clear()
-        self.box_textures.clear()
+        if self.message:
+            self.text_surfs.clear()
+            self.box_surfs.clear()
+            self.text_rects.clear()
+            self.box_rects.clear()
+            self.text_textures.clear()
+            self.box_textures.clear()
 
 def load_next_directory(text, settings): # modifies relevant objects.
     text.purge_data()
@@ -185,7 +186,7 @@ def create_displays(settings): # tiling via x-tile * y-tile DisplayFrame objects
     pos = [(0 + off[0] * settings.img_width, 0 + off[1] * settings.img_height) for off in offset]
     return displays, pos
 
-def main(settings, screen): # todo: redesign blitting, fades, sdl2 functionality.
+def main(settings, screen): # TODO: redesign fades.
 
     # pygame components, including SDL2 compliant rendering.
     clock = pygame.time.Clock()
@@ -201,8 +202,8 @@ def main(settings, screen): # todo: redesign blitting, fades, sdl2 functionality
     Globals.settings = settings
     Globals.screen = screen
 
-    # EFFECTS SECTION - experimental and fiddly. controls 1-9 for now.
-    # make instances of classes in subeffects.py in effects. on keyboard, 1 corresponds to first, 2 to second etc.
+    # EFFECTS SECTION - controls 1-9.
+    # make instances of classes in subeffects.py in effects.
     effects = [sub_effects.Spotlight(200), 
                 sub_effects.Stars(400, 1, 4),
                 sub_effects.SweepSprite("large_frozen_earth.png", (settings.get_center()), 1, 400, 2),  
@@ -217,7 +218,7 @@ def main(settings, screen): # todo: redesign blitting, fades, sdl2 functionality
     text_show = False
     fade_time = 0 # this acts as both a boolean and counter.
     fade_duration = settings.fps // 5 # 1/x seconds.
-    control_speed = 5
+    control_speed = 5 # TODO: implement acceleration
     control_index = 0
 
     while True:
@@ -239,7 +240,7 @@ def main(settings, screen): # todo: redesign blitting, fades, sdl2 functionality
                 ef.TEXTURE.draw(dstrect=ef.rect, angle=ef.theta)
 
         # draw text and boxes
-        if text.text_alpha > 0:
+        if text.text_alpha > 0 and text.message:
             texts = text.give_textures()
             for a,b in zip(texts[2], texts[3]): # boxes
                 a.alpha = text.box_alpha
