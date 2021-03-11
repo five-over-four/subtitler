@@ -290,7 +290,7 @@ def main(settings, screen): # TODO: redesign fades.
                         print(f"Not enough items in effects list: {e}")
 
                 # cycle through controllable surfaces
-                elif e.key in (pygame.K_PAGEDOWN, pygame.K_PAGEUP) and control_index is not None:
+                elif e.key in (pygame.K_PAGEDOWN, pygame.K_PAGEUP) and effects:
                     counter = 0 # we go through at most the whole list: possible that no control surface is enabled.
                     direction = -1 if e.key == pygame.K_PAGEDOWN else 1
                     control_index = (control_index + direction) % len(effects)
@@ -349,13 +349,12 @@ def main(settings, screen): # TODO: redesign fades.
             direction[0] += control_speed
 
         # apply controls
-        for ef in effects:
-            if effects[control_index] == ef:
-                if hasattr(ef, "move"):
-                    ef.move(direction)
-                if hasattr(ef, "resize"):
-                    ef.resize(resize_factor)
-                break
+        if effects:
+            ef = effects[control_index]
+            if hasattr(ef, "move"):
+                ef.move(direction)
+            if hasattr(ef, "resize"):
+                ef.resize(resize_factor)
             
         renderer.target = None
         buffer.draw()
