@@ -77,54 +77,48 @@ class Text:
 
     def __init__(self):
         self.update_font_size()
-        self.read_messages() # list of all lines in directory.txt.
+        self.read_messages()
         self.index = 0 # current line number in directory.txt.
         self.next_message()
-        self.text_surfs = [] # rewrite into dict format surf: rect or so.
-        self.box_surfs = []
-        self.text_rects = []
-        self.box_rects = []
+        self.texts = {} # Texture: Rect
+        self.boxes = {} # Texture: Rect
         self.text_alpha = 0
         self.box_alpha = 0
-        self.max_alpha = 230 # for boxes.
+        self.max_alpha = 225 # max alpha for the box under text.
         self.speaker_height = 120
 
     def update_font_size(self): # linear function: font_size is 40 at width 1500, 60 at 2000.
         self.font_size = (Globals.screen.size[0] - 500) // 25
-
-    def load_surfaces(self): # this is a bit unwieldy. rewrite.
+        
+    # creates a bunch of temporary Surfaces that are then rendered into Texture and Rect objects.
+    def load_surfaces(self):
         if not self.message:
             return
         self.update_font_size()
         self.font = pygame.font.SysFont("courier", self.font_size) # first reset font at desired size (default 40).
         x, y = settings.get_center()
-        if len(self.message) > 1: # speaker # line format.
-            self.set_subtitle_size(self.message[1])
-            text_surf = self.font.render(self.message[1], True, (255,255,255))
+        self.set_subtitle_size(max(self.message, key=lambda x: len(x))) # based on the longer segment.
+        text_surf = self.font.render(self.message[-1], True, (255,255,255))
+        text_box = pygame.Surface((text_surf.get_width() + 20, text_surf.get_height() + 20))
+        text_box.set_colorkey((1,2,3)) # Texture.alpha needs a colorkey to work properly.
+        text_surfs = [text_surf]
+        box_surfs = [text_box]
+        text_rects = [text_surf.get_rect(center=(x,y))]
+        box_rects = [text_box.get_rect(center=(x,y))]
+        if len(self.message) > 1: # then the speaker line.
             speaker_surf = self.font.render("(" + self.message[0] + ")", True, (255,255,255))
-            text_box = pygame.Surface((text_surf.get_rect().width + 20, text_surf.get_rect().height + 20))
-            speaker_box = pygame.Surface((speaker_surf.get_rect().width + 20, speaker_surf.get_rect().height + 20))
-            text_box.set_colorkey((1,2,3)) # this is a workaround.
+            speaker_box = pygame.Surface((speaker_surf.get_width() + 20, speaker_surf.get_height() + 20))
             speaker_box.set_colorkey((1,2,3))
-            self.text_surfs = [text_surf, speaker_surf]
-            self.box_surfs = [text_box, speaker_box]
-            height = self.box_surfs[1].get_height()*1.3
-            self.text_rects = [text_surf.get_rect(center=(x,y)), speaker_surf.get_rect(center=(x,y-self.speaker_height))]
-            self.box_rects = [text_box.get_rect(center=(x,y)), speaker_box.get_rect(center=(x,y-self.speaker_height))]
-        else: # regular line without speaker.
-            self.set_subtitle_size(self.message[0])
-            text_surf = self.font.render(self.message[0], True, (255,255,255))
-            text_box = pygame.Surface((text_surf.get_rect().width + 20, text_surf.get_rect().height + 20))
-            text_box.set_colorkey((1,2,3))
-            self.text_surfs = [text_surf]
-            self.box_surfs = [text_box]
-            self.text_rects = [text_surf.get_rect(center=(x,y))]
-            self.box_rects = [text_box.get_rect(center=(x,y))]
-        self.text_textures = [pygame._sdl2.Texture.from_surface(Globals.renderer, text_surf) for text_surf in self.text_surfs]
-        self.box_textures = [pygame._sdl2.Texture.from_surface(Globals.renderer, box_surf) for box_surf in self.box_surfs]
+            text_surfs.append(speaker_surf)
+            box_surfs.append(speaker_box)
+            self.speaker_height = box_surfs[1].get_height()*1.3 # rough placement.
+            text_rects.append(speaker_surf.get_rect(center=(x,y-self.speaker_height)))
+            box_rects.append(speaker_box.get_rect(center=(x,y-self.speaker_height)))
+        self.texts = {pygame._sdl2.Texture.from_surface(Globals.renderer, text_surf): text_rect for text_surf, text_rect in zip(text_surfs, text_rects)}
+        self.boxes = {pygame._sdl2.Texture.from_surface(Globals.renderer, box_surf): box_rect for box_surf, box_rect in zip(box_surfs, box_rects)}
 
     def give_textures(self):
-        return (self.text_textures, self.text_rects, self.box_textures, self.box_rects)
+        return self.texts, self.boxes
         
     def read_messages(self): # find dirname.txt or create one if missing.
         filename = settings.hub_path + "/" + settings.image_set + ".txt"
@@ -151,19 +145,14 @@ class Text:
 
     def purge_data(self):
         if self.message:
-            self.text_surfs.clear()
-            self.box_surfs.clear()
-            self.text_rects.clear()
-            self.box_rects.clear()
-            self.text_textures.clear()
-            self.box_textures.clear()
+            self.texts.clear()
+            self.boxes.clear()
 
-def load_next_directory(text, settings): # modifies relevant objects.
+def load_next_directory(text, settings):
     text.purge_data()
-    # first load the new files into Settings(), skipping empty directories.
     while True:
         settings.current_index = (settings.current_index + 1) % len(settings.directory_list)
-        try:
+        try: # new directory and image data.
             settings.image_set = settings.directory_list[settings.current_index]
             settings.images = os.listdir(settings.hub_path + settings.image_set)
             settings.path = settings.hub_path + settings.image_set
@@ -173,7 +162,6 @@ def load_next_directory(text, settings): # modifies relevant objects.
             break
         except:
             continue
-    # then make the changes to Text()
     text.read_messages()
     text.index = 0
     text.text_alpha = 0
@@ -235,19 +223,17 @@ def main(settings, screen): # TODO: redesign fades.
 
         # draw effects on top
         for ef in effects:
-            ef.update()
             if ef.opacity > 0:
-                ef.TEXTURE.draw(dstrect=ef.rect, angle=ef.theta)
+                ef.TEXTURE.draw(**ef.update())
 
         # draw text and boxes
         if text.text_alpha > 0 and text.message:
-            texts = text.give_textures()
-            for a,b in zip(texts[2], texts[3]): # boxes
-                a.alpha = text.box_alpha
-                a.draw(dstrect=b.topleft)
-            for c,d in zip(texts[0], texts[1]): # texts
-                c.alpha = text.text_alpha
-                c.draw(dstrect=d.topleft)
+            for box in text.boxes:
+                box.alpha = text.box_alpha
+                box.draw(dstrect=text.boxes[box].topleft)
+            for txt in text.texts:
+                txt.alpha = text.text_alpha
+                txt.draw(dstrect=text.texts[txt].topleft)
 
         # EVENT HANDLING SECTION
         for e in pygame.event.get():
@@ -255,7 +241,7 @@ def main(settings, screen): # TODO: redesign fades.
             if e.type == pygame.QUIT:
                 exit()
 
-            elif e.type == pygame.MOUSEBUTTONDOWN: # focus spotlight on click.
+            elif e.type == pygame.MOUSEBUTTONDOWN: # focus spotlight on click for zooming.
                 for i, ef in enumerate(effects):
                     if ef.__class__.__name__ == "Spotlight":
                         control_index = i
@@ -306,11 +292,9 @@ def main(settings, screen): # TODO: redesign fades.
 
                 # cycle through controllable surfaces
                 elif e.key in (pygame.K_PAGEDOWN, pygame.K_PAGEUP) and control_index is not None:
-
                     counter = 0 # we go through at most the whole list: possible that no control surface is enabled.
                     direction = -1 if e.key == pygame.K_PAGEDOWN else 1
                     control_index = (control_index + direction) % len(effects)
-
                     while not (hasattr(effects[control_index], "move") or hasattr(effects[control_index], "resize")) or not effects[control_index].opacity:
                         control_index = (control_index + direction) % len(effects)
                         counter += 1
@@ -335,7 +319,7 @@ def main(settings, screen): # TODO: redesign fades.
                 buffer = pygame._sdl2.Texture(renderer, settings.resolution, target=True)
                 text.update_font_size()
 
-        # FADES FOR TEXT AND BOXES. (todo: build into classes.)
+        # FADES FOR TEXT AND BOXES. (TODO: build into classes.)
         if fade_time > 0 and text_show: # fade in
             fade_time += 1
             text.text_alpha += 255 // fade_duration
@@ -344,7 +328,6 @@ def main(settings, screen): # TODO: redesign fades.
             fade_time += 1
             text.text_alpha -= 255 // fade_duration
             text.box_alpha -= text.max_alpha // fade_duration
-
         if fade_time > fade_duration: # fade has finished.
             fade_time = 0
 
@@ -389,7 +372,7 @@ def main(settings, screen): # TODO: redesign fades.
             if hasattr(ef, "move") and effects[control_index] == ef:
                 ef.move(direction)
                 break
-
+        
         renderer.target = None
         buffer.draw()
         renderer.present() 

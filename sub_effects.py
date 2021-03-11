@@ -40,6 +40,7 @@ class Sprite:
         if self.spin_speed:
             self.theta = (self.theta + self.spin_speed) % 360
         self.TEXTURE.alpha = self.opacity
+        return {"dstrect": self.rect, "angle": self.theta}
 
     def move(self, diff):
         self.pos = self.pos[0] + diff[0], self.pos[1] + diff[1]
@@ -101,7 +102,6 @@ class Stars:
 
     def __init__(self, n, minsize, maxsize):
         self.rect = (0,0)
-        self.theta = 0
         self.opacity = 0
         self.fade_speed = -3
         self.minsize = minsize
@@ -131,6 +131,7 @@ class Stars:
         elif self.opacity < 0:
             self.opacity = 0
         self.TEXTURE.alpha = self.opacity
+        return {"dstrect": self.rect}
 
     def toggle(self):
         if self.opacity == 0 and self.surf.get_size() != screen.size:
@@ -146,7 +147,6 @@ class Spotlight: # kinda hacky and renders a new texture every frame.
         self.cover = pygame.Surface(settings.resolution)
         self.cover.fill(0)
         self.rect = (0,0)
-        self.theta = 0
         self.cover.set_colorkey((255,255,255))
         self.pos = (0,0)
         self.radius = radius
@@ -160,6 +160,7 @@ class Spotlight: # kinda hacky and renders a new texture every frame.
             self.pos = pygame.mouse.get_pos()
             pygame.draw.circle(self.cover, (255,255,255), self.pos, self.radius)
             self.TEXTURE = pygame._sdl2.Texture.from_surface(renderer, self.cover)
+            return {"dstrect": self.rect}
 
     def resize(self, order):
         self.radius += order * 100
