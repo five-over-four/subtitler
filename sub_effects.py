@@ -9,6 +9,7 @@ effects = os.path.dirname(os.path.realpath(__file__)) + "/effects/"
 renderer = None
 settings = None
 screen = None
+buffer = None
 
 class Sprite:
 
@@ -26,8 +27,6 @@ class Sprite:
         self.fade_speed = -fade_speed # flips when calling toggle()
 
     def update(self):
-        if self.opacity == 0:
-           return
         self.automate_movement() # inherited class defines this.
         self.opacity += self.fade_speed 
         if self.opacity > 255:
@@ -125,8 +124,6 @@ class Stars:
         self.TEXTURE = pygame._sdl2.Texture.from_surface(renderer, self.surf)
 
     def update(self):
-        if self.opacity == 0:
-            return
         self.opacity += self.fade_speed
         if self.opacity > 255:
             self.opacity = 255
@@ -138,12 +135,36 @@ class Stars:
     def toggle(self):
         if self.opacity == 0 and self.surf.get_size() != screen.size:
             self.dimensions = screen.size
+            self.surf = pygame.Surface(self.dimensions)
             self.create_stars()
         self.fade_speed *= -1
         self.opacity += self.fade_speed
         print(f"Stars is {self.fade_speed > 0}")
 
-class Spotlight: # kinda hacky and renders a new texture every frame.
+# improved spotlight using additive alpha blending.
+# use any texture.
+class Spotlight:
+    def __init__(self, light_texture, radius):
+        self.radius = radius
+        self.light = pygame.image.load(effects + light_texture)
+        self.opacity = 0
+
+    def update(self): 
+        self.shine(self.light)
+        self.TEXTURE.draw(dstrect=(0,0))
+
+    def shine(self, lightbeam): # new texture every frame - expensive.
+        self.cover = pygame.Surface(screen.size)
+        self.cover.fill(0)
+        self.cover.blit(self.light, tuple([x - self.radius for x in pygame.mouse.get_pos()]))
+        self.TEXTURE = pygame._sdl2.Texture.from_surface(renderer, self.cover)
+        self.TEXTURE.blend_mode = 4
+
+    def toggle(self):
+        self.opacity = 1 if self.opacity == 0 else 0
+        print(f"Spot is {self.opacity > 0}")
+
+class LegacySpotlight: # keeping for now.
 
     def __init__(self, radius):
         self.cover = pygame.Surface(settings.resolution)

@@ -182,6 +182,7 @@ def main(settings, screen): # TODO: redesign fades.
     sub_effects.renderer = renderer
     sub_effects.settings = settings
     sub_effects.screen = screen
+    sub_effects.buffer = buffer
     Globals.renderer = renderer
     Globals.settings = settings
     Globals.screen = screen
@@ -191,8 +192,7 @@ def main(settings, screen): # TODO: redesign fades.
     effects = [ sub_effects.Stars(400, 1, 4),
                 sub_effects.ArcSprite("large_frozen_earth.png", (screen.size[0]//2, 300), 0, 200, 0.5, 216),
                 sub_effects.ArcSprite("large_frozen_earth.png", (screen.size[0]//2, 300), 0, 200, 0.5, 288),
-                sub_effects.Sprite("large_frozen_earth.png", (0,0), 10, 1),
-                sub_effects.Spotlight(200)]
+                sub_effects.Sprite("large_frozen_earth.png", (0,0), 10, 1)]
 
     displays, pos = create_displays(settings)
     text = Text()
@@ -202,6 +202,9 @@ def main(settings, screen): # TODO: redesign fades.
     fade_duration = settings.fps // 5 # 1/x seconds.
     control_speed = 5 # TODO: implement acceleration
     control_index = 0
+    fullscreen_toggle = False # no 'screen.is_fullscreen' in SDL2, need this.
+
+    spotlight = sub_effects.Spotlight("light.png", 200) # radius should be half the image's width.
 
     while True:
 
@@ -220,6 +223,9 @@ def main(settings, screen): # TODO: redesign fades.
             if ef.opacity > 0:
                 ef.TEXTURE.draw(**ef.update())
 
+        if spotlight.opacity > 0:
+            spotlight.update()
+
         # draw text and boxes
         if text.text_alpha > 0 and text.message:
             for box in text.boxes:
@@ -236,15 +242,21 @@ def main(settings, screen): # TODO: redesign fades.
                 exit()
 
             elif e.type == pygame.MOUSEBUTTONDOWN: # focus spotlight on click for zooming.
-                for i, ef in enumerate(effects):
-                    if ef.__class__.__name__ == "Spotlight":
-                        control_index = i
-                        break
+                spotlight.toggle()
 
             elif e.type == pygame.KEYDOWN:
 
                 if e.key == pygame.K_ESCAPE:
                     exit()
+
+                # show next text line / hide current one
+                elif e.key in (pygame.K_z, pygame.K_x, pygame.K_c):
+                    if not text_show:
+                        text.text_alpha = 0
+                        text.box_alpha = 0
+                        text.next_message()
+                    text_show ^= True
+                    fade_time = 1 # access fades.
 
                 elif e.key == pygame.K_a: # reload current text file. retain position.
                     text.read_messages()
@@ -296,15 +308,14 @@ def main(settings, screen): # TODO: redesign fades.
                         if counter >= len(effects):
                             break
                     print(f"current control key: {control_index + 1}") # which button to press to enable this one.
-                    
-                # show next text line / hide current one
-                elif e.key in (pygame.K_z, pygame.K_x, pygame.K_c):
-                    if not text_show:
-                        text.text_alpha = 0
-                        text.box_alpha = 0
-                        text.next_message()
-                    text_show ^= True
-                    fade_time = 1 # access fades.
+
+                # toggle fullscreen on/off. clumsy due to lacking SDL2 functionality.
+                elif e.key == pygame.K_F11:
+                    fullscreen_toggle ^= True
+                    if fullscreen_toggle:
+                        screen.set_fullscreen()
+                    else:
+                        screen.set_windowed()
 
             # recomputing various screensize aspects after resize
             elif e.type == pygame.VIDEORESIZE:
@@ -314,6 +325,7 @@ def main(settings, screen): # TODO: redesign fades.
                 settings.resolution = screen.size
                 buffer = pygame._sdl2.Texture(renderer, settings.resolution, target=True)
                 text.update_font_size()
+                print("Current resolution: %s x %s" %(settings.resolution))
 
         # FADES FOR TEXT AND BOXES. (TODO: build into classes.)
         if fade_time > 0 and text_show: # fade in
@@ -405,6 +417,6 @@ if __name__ == "__main__":
             print(f"Incorrect input: {e}.")
 
     delete_old_textfiles(hub_path, dir_names)
-    print(f"Current resolution: {resolution}")
+    print("Current resolution: %s x %s" %(settings.resolution))
 
     main(settings, screen)
