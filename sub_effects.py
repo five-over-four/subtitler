@@ -10,9 +10,6 @@ renderer = None
 settings = None
 screen = None
 
-def returnTest():
-    return test
-
 class Sprite:
 
     def __init__(self, item, pos, fade_speed, spin_speed=0):
@@ -102,7 +99,7 @@ class SweepSprite(Sprite): # back and forth.
         self.phi = (self.phi + self.rate) % 360
         self.pos = self.sway_pos()
 
-# draw random-sized small squares at random positions.
+# draw random-sized small circles at random positions.
 class Stars:
 
     def __init__(self, n, minsize, maxsize):

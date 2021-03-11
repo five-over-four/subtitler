@@ -1,12 +1,9 @@
-import pygame
 import pygame._sdl2
 import os
-from random import randint, choice
+from random import randint
 from itertools import product
 from math import ceil
 import sub_effects
-
-pygame.init()
 
 # every class has functions with a need to access these.
 # they are also singletons, so this makes *some* sense.
@@ -369,6 +366,8 @@ def delete_old_textfiles(directory, dirnames):
 
 if __name__ == "__main__":
 
+    pygame.init()
+
     # STARTUP CONFIGURATION - directory choice and resolution.
     # you want to put all the image directories into ./pics, 'tmp' ignored, 'backgrounds' only used for 'b' to enable background.
     possible_directories = []
@@ -385,15 +384,15 @@ if __name__ == "__main__":
 
     while "entering config":
         try:
-            dirchoice = input("Directory\n> ")
-            reschoice = input("Resolution\n> ") # width
-            resolution = (int(reschoice)*16//9, int(reschoice))
+            dir_choice = input("Directory\n> ")
+            res_choice = input("Resolution\n> ") # width
+            resolution = (int(res_choice)*16//9, int(res_choice))
             screen = pygame._sdl2.Window("...", size=resolution, resizable=True)
-            if dirchoice.isnumeric():
-                settings = Settings(possible_directories[int(dirchoice)-1], resolution)
-                settings.current_index = int(dirchoice) - 1
+            if dir_choice.isnumeric():
+                settings = Settings(possible_directories[int(dir_choice)-1], resolution)
+                settings.current_index = int(dir_choice) - 1
             else:
-                tmp_index = possible_directories.index(dirchoice)
+                tmp_index = possible_directories.index(dir_choice)
                 settings = Settings(possible_directories[tmp_index], resolution)
                 settings.current_index = tmp_index
             settings.directory_list = possible_directories

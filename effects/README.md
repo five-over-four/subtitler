@@ -14,6 +14,8 @@ Produces n white circles on the screen, sized between minsize and maxsize in rad
 ## Spotlight
 Makes a spotlight: hides flickering images under a black screen, and shows them only through a circle on your cursor. Can be resized with +/-.
 
+![Spotlight](https://i.imgur.com/x5Ze0J0.png)
+
 # Usage
 Place any effects as instances of these classes into the 'effects' list in the main function.
 
