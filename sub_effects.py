@@ -15,7 +15,7 @@ def returnTest():
 
 class Sprite:
 
-    def __init__(self, item, pos, fade_speed, spin_speed):
+    def __init__(self, item, pos, fade_speed, spin_speed=0):
         self.img_ref = pygame.image.load(effects + item) # reference image
         self.size = self.img_ref.get_size()
         self.TEXTURE = pygame._sdl2.Texture.from_surface(renderer, self.img_ref)
@@ -86,16 +86,21 @@ class ArcSprite(Sprite):
         self.rect.center = self.pos
 
 class SweepSprite(Sprite): # back and forth.
-    def __init__(self, item, center, rate, width, spin_speed):
-        super().__init__(item, center, 10, spin_speed)
-        self.width = width
-        self.center = center
+    def __init__(self, item, origin, rate, radius, spin_speed):
+        super().__init__(item, origin, 10, spin_speed)
+        self.origin = origin
+        self.radius = radius
         self.rate = rate
-        self.sway_pos = 0
+        self.phi = 0
+
+    def sway_pos(self):
+        x = self.radius * sin(self.phi * pi / 180) + self.origin[0]
+        y = self.origin[1]
+        return (x,y)
 
     def automate_movement(self):
-        self.sway_pos = (self.sway_pos + self.rate) % 360
-        self.pos = ((self.width // 2) * sin(self.sway_pos * pi / 180), self.pos[1])
+        self.phi = (self.phi + self.rate) % 360
+        self.pos = self.sway_pos()
 
 # draw random-sized small squares at random positions.
 class Stars:
@@ -163,7 +168,7 @@ class Spotlight: # kinda hacky and renders a new texture every frame.
             return {"dstrect": self.rect}
 
     def resize(self, order):
-        self.radius += order * 100
+        self.radius *= 1 + order / 2
 
     def toggle(self):
         self.opacity = 255 if self.opacity == 0 else 0

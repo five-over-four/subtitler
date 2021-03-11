@@ -210,7 +210,7 @@ def main(settings, screen): # TODO: redesign fades.
 
     while True:
 
-        renderer.target = buffer 
+        renderer.target = buffer
         renderer.clear()
 
         # draw flickering panels
@@ -337,7 +337,7 @@ def main(settings, screen): # TODO: redesign fades.
         pressed = pygame.key.get_pressed()
         if pressed[pygame.K_PLUS] or pressed[pygame.K_MINUS]:
             resize_factor += 0.01 if pressed[pygame.K_PLUS] else -0.01
-
+            
         # MOVEMENT CONTROL SECTION
         direction = [0,0]
         if pressed[pygame.K_i]:
@@ -348,12 +348,6 @@ def main(settings, screen): # TODO: redesign fades.
             direction[1] += control_speed
         if pressed[pygame.K_l]:
             direction[0] += control_speed
-    
-        # resize selected control surface.
-        for ef in effects:
-            if hasattr(ef, "resize") and effects[control_index] == ef:
-                ef.resize(resize_factor)
-                break
 
         # move things
         for ef in effects:
@@ -365,6 +359,13 @@ def main(settings, screen): # TODO: redesign fades.
         buffer.draw()
         renderer.present() 
         clock.tick(settings.fps)
+
+# if the directory corresponding to a text file has been removed, remove text file as well.
+def delete_old_textfiles(directory, dirnames):
+    files = [file for file in os.listdir(directory) if ".txt" in file]
+    for filename in files:
+        if filename[:-4] not in dirnames:
+            os.remove(directory + filename)
 
 if __name__ == "__main__":
 
@@ -404,6 +405,7 @@ if __name__ == "__main__":
         except Exception as e:
             print(f"Incorrect input: {e}.")
 
+    delete_old_textfiles(hub_path, dir_names)
     print(f"Current resolution: {resolution}")
 
     main(settings, screen)
