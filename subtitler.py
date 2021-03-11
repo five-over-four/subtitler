@@ -193,7 +193,6 @@ def main(settings, screen): # TODO: redesign fades.
     # EFFECTS SECTION - controls 1-9.
     # make instances of classes in subeffects.py in effects.
     effects = [ sub_effects.Stars(400, 1, 4),
-                sub_effects.SweepSprite("town2.png", (1000, 600), 0.5, 400, 0),  
                 sub_effects.ArcSprite("large_frozen_earth.png", (screen.size[0]//2, 300), 0, 200, 0.5, 216),
                 sub_effects.ArcSprite("large_frozen_earth.png", (screen.size[0]//2, 300), 0, 200, 0.5, 288),
                 sub_effects.Sprite("large_frozen_earth.png", (0,0), 10, 1),
@@ -349,18 +348,21 @@ def main(settings, screen): # TODO: redesign fades.
         if pressed[pygame.K_l]:
             direction[0] += control_speed
 
-        # move things
+        # apply controls
         for ef in effects:
-            if hasattr(ef, "move") and effects[control_index] == ef:
-                ef.move(direction)
+            if effects[control_index] == ef:
+                if hasattr(ef, "move"):
+                    ef.move(direction)
+                if hasattr(ef, "resize"):
+                    ef.resize(resize_factor)
                 break
-        
+            
         renderer.target = None
         buffer.draw()
         renderer.present() 
         clock.tick(settings.fps)
 
-# if the directory corresponding to a text file has been removed, remove text file as well.
+# remopve text files that are left behind.
 def delete_old_textfiles(directory, dirnames):
     files = [file for file in os.listdir(directory) if ".txt" in file]
     for filename in files:
