@@ -20,10 +20,10 @@ class Settings:
         self.center = self.get_center()
         self.fps = 144 # set to whatever. most settings are independent of it.
         self.rng_factor = (self.fps * self.speed) // 10 # how often images switch randomly.
-        self.background = None
-        self.next_background(1) # 1 means 'forward', -1 'backward'.
-        self.bg_index = 0
-        self.bg_on = False
+        self.overlay = None
+        self.next_overlay(1) # 1 means 'forward', -1 'backward'.
+        self.overlay_index = 0
+        self.overlay_on = False
         self.spotlight_index = 0
 
     def get_center(self):
@@ -32,22 +32,22 @@ class Settings:
     def refresh_rng_value(self):
         self.rng_factor = (self.fps * self.speed) // 10
 
-    def next_background(self, direction):
-        self.backgrounds = os.listdir(self.path + "backgrounds/")
-        if len(self.backgrounds) > 0:
-            if self.background == None:
-                self.pygame_background = pygame.image.load(self.path + "backgrounds/" + self.backgrounds[0])
+    def next_overlay(self, direction):
+        self.overlays = os.listdir(self.path + "overlays/")
+        if len(self.overlays) > 0:
+            if self.overlay == None:
+                self.pygame_overlay = pygame.image.load(self.path + "overlays/" + self.overlays[0])
             else:
-                self.bg_index = (self.bg_index + direction) % len(self.backgrounds)
-                self.pygame_background = pygame.image.load(self.path + "backgrounds/" + self.backgrounds[self.bg_index])
+                self.overlay_index = (self.overlay_index + direction) % len(self.overlays)
+                self.pygame_overlay = pygame.image.load(self.path + "overlays/" + self.overlays[self.overlay_index])
 
-    def next_spotlight(self, direction): # carbon copy of the background function, TODO: combine.
+    def next_spotlight(self, direction): # carbon copy of the overlay function, TODO: combine.
         spotlights = os.listdir(self.path + "spotlights")
         self.spotlight_index = (self.spotlight_index + direction) % len(spotlights)
         return pygame.image.load(self.path + "spotlights/" + spotlights[self.spotlight_index])
 
-    def render_background(self):
-        self.background = pygame._sdl2.Texture.from_surface(renderer, self.pygame_background)
+    def render_overlay(self):
+        self.overlay = pygame._sdl2.Texture.from_surface(renderer, self.pygame_overlay)
 
 class DisplayFrame:
 
@@ -184,8 +184,9 @@ def main(settings, screen, renderer): # TODO: redesign fades.
 
     # EFFECTS SECTION - controls 1-9.
     # make instances of classes in subeffects.py in effects.
+    spotlight = sub_effects.Spotlight("light.png")
     effects = [ sub_effects.Stars(400, 1, 4),
-                sub_effects.ArcSprite("large_frozen_earth.png", (screen.size[0]//2, 300), 0, 200, 0.5, 216),
+                sub_effects.ArcSprite("large_frozen_earth.png", origin=(screen.size[0]//2, 300), spin_speed=0, radius=500, speed=5, start_angle=216),
                 sub_effects.ArcSprite("large_frozen_earth.png", (screen.size[0]//2, 300), 0, 200, 0.5, 288),
                 sub_effects.Sprite("large_frozen_earth.png", (0,0), 10, 1)]
 
@@ -199,29 +200,25 @@ def main(settings, screen, renderer): # TODO: redesign fades.
     control_index = 0
     fullscreen_toggle = False # no 'screen.is_fullscreen' in SDL2, need this.
 
-    spotlight = sub_effects.Spotlight("light.png", 200) # radius should be half the image's width.
-
     while True:
 
         renderer.target = buffer
         renderer.clear()
 
-        # draw flickering panels
-        for i, display in enumerate(displays):
+        # DRAWING SECTION
+        for i, display in enumerate(displays): # must be bottom, 100% opaque.
             display.give_textures().draw(dstrect=pos[i])
 
-        if settings.bg_on:
-            settings.background.draw(dstrect=(0,0))
+        if settings.overlay_on: # overlay.
+            settings.overlay.draw(dstrect=(0,0))
 
         if spotlight.opacity > 0:
             spotlight.update()
 
-        # draw effects on top
         for ef in effects:
             if ef.opacity > 0:
                 ef.TEXTURE.draw(**ef.update())
 
-        # draw text and boxes
         if text.text_alpha > 0 and text.message:
             for box in text.boxes:
                 box.alpha = text.box_alpha
@@ -261,10 +258,10 @@ def main(settings, screen, renderer): # TODO: redesign fades.
                 elif e.key == pygame.K_a: # reload current text file. retain position.
                     text.read_messages()
 
-                elif e.key == pygame.K_b: # enable background (transparent overlay)
-                    settings.bg_on ^= True
-                    if not settings.background:
-                        settings.render_background()
+                elif e.key == pygame.K_b: # enable overlay
+                    settings.overlay_on ^= True
+                    if not settings.overlay:
+                        settings.render_overlay()
 
                 elif e.key == pygame.K_d: # switch directory.
                     load_next_directory(text, settings)
@@ -272,12 +269,12 @@ def main(settings, screen, renderer): # TODO: redesign fades.
                     text_show = False
 
                 elif e.key == pygame.K_LEFT:
-                    settings.next_background(-1)
-                    settings.render_background()
+                    settings.next_overlay(-1)
+                    settings.render_overlay()
 
                 elif e.key == pygame.K_RIGHT:
-                    settings.next_background(1)
-                    settings.render_background()
+                    settings.next_overlay(1)
+                    settings.render_overlay()
 
                 elif e.key == pygame.K_RETURN: # reset to the first line.
                     text.index = 0
@@ -388,7 +385,7 @@ if __name__ == "__main__":
     hub_path = os.path.dirname(os.path.realpath(__file__)) + "/pics/"
     dir_names = os.listdir(hub_path)
     for i in dir_names:
-        if os.path.isdir(hub_path + i) and i != "tmp" and i != "backgrounds":
+        if os.path.isdir(hub_path + i) and i != "tmp" and i != "overlays":
             possible_directories.append(i)
     print("#" * 40)
     print("# Available directories:" + " "*15 + "#")

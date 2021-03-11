@@ -73,7 +73,7 @@ class ArcSprite(Sprite):
 
     def arc_pos(self):
         x = self.radius * cos(self.phi * pi / 180) + self.origin[0]
-        y = self.radius * sin(self.phi * pi / 180) + self.origin[1]
+        y = self.radius * 0.5 * sin(self.phi * pi / 180) + self.origin[1]
         return (x,y)
 
     def automate_movement(self):
@@ -142,11 +142,11 @@ class Stars:
         print(f"Stars is {self.fade_speed > 0}")
 
 # improved spotlight using additive alpha blending.
-# use any texture.
+# use any texture. black = opaque, white = transparent.
 class Spotlight:
-    def __init__(self, light_texture, radius):
-        self.radius = radius
+    def __init__(self, light_texture):
         self.light = pygame.image.load(os.path.dirname(os.path.realpath(__file__)) + "/spotlights/" + light_texture)
+        self.w, self.h = self.light.get_size()
         self.opacity = 0
 
     def update(self):
@@ -156,12 +156,13 @@ class Spotlight:
     def shine(self, lightbeam): # new texture every frame - expensive.
         self.cover = pygame.Surface(screen.size)
         self.cover.fill(0)
-        self.cover.blit(pygame.transform.scale(self.light, (self.radius*2,self.radius*2)), tuple([x - self.radius for x in pygame.mouse.get_pos()]))
+        x, y = pygame.mouse.get_pos()
+        self.cover.blit(pygame.transform.scale(self.light, (self.w, self.h)), (x - self.w // 2, y - self.h // 2))
         self.TEXTURE = pygame._sdl2.Texture.from_surface(renderer, self.cover)
         self.TEXTURE.blend_mode = 4 
 
     def resize(self, order):
-        self.radius = round(self.radius * (1 + order))
+        self.w, self.h = round(self.w * (1 + order)), round(self.h * (1 + order))
 
     def toggle(self):
         self.opacity = 1 if self.opacity == 0 else 0
