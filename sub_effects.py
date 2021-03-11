@@ -146,10 +146,10 @@ class Stars:
 class Spotlight:
     def __init__(self, light_texture, radius):
         self.radius = radius
-        self.light = pygame.image.load(effects + light_texture)
+        self.light = pygame.image.load("./spotlights/" + light_texture)
         self.opacity = 0
 
-    def update(self): 
+    def update(self):
         self.shine(self.light)
         self.TEXTURE.draw(dstrect=(0,0))
 
@@ -158,7 +158,7 @@ class Spotlight:
         self.cover.fill(0)
         self.cover.blit(pygame.transform.scale(self.light, (self.radius*2,self.radius*2)), tuple([x - self.radius for x in pygame.mouse.get_pos()]))
         self.TEXTURE = pygame._sdl2.Texture.from_surface(renderer, self.cover)
-        self.TEXTURE.blend_mode = 4
+        self.TEXTURE.blend_mode = 4 
 
     def resize(self, order):
         self.radius = round(self.radius * (1 + order))

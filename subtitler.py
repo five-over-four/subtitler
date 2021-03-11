@@ -31,6 +31,7 @@ class Settings:
         self.next_background(1) # 1 means 'forward', -1 'backward'.
         self.bg_index = 0
         self.bg_on = False
+        self.spotlight_index = 0
 
     def get_center(self):
         return (self.resolution[0] // 2, self.resolution[1] // 2)
@@ -46,6 +47,11 @@ class Settings:
             else:
                 self.bg_index = (self.bg_index + direction) % len(self.backgrounds)
                 self.pygame_background = pygame.image.load(self.hub_path + "backgrounds/" + self.backgrounds[self.bg_index])
+
+    def next_spotlight(self, direction): # carbon copy of the background function, TODO: combine.
+        spotlights = os.listdir("./spotlights")
+        self.spotlight_index = (self.spotlight_index + direction) % len(spotlights)
+        return pygame.image.load("./spotlights/" + spotlights[self.spotlight_index])
 
     def render_background(self):
         self.background = pygame._sdl2.Texture.from_surface(Globals.renderer, self.pygame_background)
@@ -242,7 +248,12 @@ def main(settings, screen): # TODO: redesign fades.
                 exit()
 
             elif e.type == pygame.MOUSEBUTTONDOWN: # focus spotlight on click for zooming.
-                spotlight.toggle()
+                if e.button == 1:
+                    spotlight.toggle()
+                elif e.button == 4:
+                    spotlight.light = settings.next_spotlight(1)
+                elif e.button == 5:
+                    spotlight.light = settings.next_spotlight(-1)
 
             elif e.type == pygame.KEYDOWN:
 
@@ -361,8 +372,8 @@ def main(settings, screen): # TODO: redesign fades.
             ef = effects[control_index]
             if hasattr(ef, "move"):
                 ef.move(direction)
-            if spotlight.opacity > 0:
-                spotlight.resize(resize_factor) # takes precedent sprites.
+            if spotlight.opacity > 0: # takes precedent over sprites.
+                spotlight.resize(resize_factor)
             elif hasattr(ef, "resize"):
                 ef.resize(resize_factor)
                 
