@@ -2,7 +2,6 @@ import pygame
 import pygame._sdl2
 import os
 from random import randint, choice
-from PIL import Image
 from itertools import product
 from math import ceil
 import sub_effects
@@ -25,7 +24,7 @@ class Settings:
         self.path = self.hub_path + folder # actual path of the directory
         self.images = os.listdir(self.path) # list of filenames.
         self.speed = 15
-        self.img_width, self.img_height = Image.open(self.path + "/" + self.images[0]).size
+        self.img_width, self.img_height = pygame.image.load(self.path + "/" + self.images[0]).get_size()
         self.x = ceil(self.resolution[0] / self.img_width) # number of tiles.
         self.y = ceil(self.resolution[1] / self.img_height)
         self.center = self.get_center()
@@ -156,7 +155,7 @@ def load_next_directory(text, settings):
             settings.image_set = settings.directory_list[settings.current_index]
             settings.images = os.listdir(settings.hub_path + settings.image_set)
             settings.path = settings.hub_path + settings.image_set
-            settings.img_width, settings.img_height = Image.open(settings.path + "/" + settings.images[0]).size
+            settings.img_width, settings.img_height = pygame.image.load(settings.path + "/" + settings.images[0]).get_size()
             settings.x = ceil(screen.size[0] / settings.img_width) 
             settings.y = ceil(screen.size[1] / settings.img_height)
             break
@@ -258,6 +257,11 @@ def main(settings, screen): # TODO: redesign fades.
                     if not settings.background:
                         settings.render_background()
 
+                elif e.key == pygame.K_d: # switch directory.
+                    load_next_directory(text, settings)
+                    displays, pos = create_displays(settings)
+                    text_show = False
+
                 elif e.key == pygame.K_LEFT:
                     settings.next_background(-1)
                     settings.render_background()
@@ -265,11 +269,6 @@ def main(settings, screen): # TODO: redesign fades.
                 elif e.key == pygame.K_RIGHT:
                     settings.next_background(1)
                     settings.render_background()
-
-                elif e.key == pygame.K_d: # switch directory.
-                    load_next_directory(text, settings)
-                    displays, pos = create_displays(settings)
-                    text_show = False
 
                 elif e.key == pygame.K_RETURN: # reset to the first line.
                     text.index = 0
