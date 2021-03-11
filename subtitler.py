@@ -176,13 +176,13 @@ def create_displays(settings): # tiling via x-tile * y-tile DisplayFrame objects
 
 def main(settings, screen): # TODO: redesign fades.
 
-    # pygame components, including SDL2 compliant rendering.
+    # pygame components, including SDL2 rendering.
     clock = pygame.time.Clock()
-    renderer = pygame._sdl2.Renderer(screen, vsync=False)
+    renderer = pygame._sdl2.Renderer(screen, vsync=True)
     buffer = pygame._sdl2.Texture(renderer, settings.resolution, target=True)
     buffer.blend_mode = 1
 
-    # pass global parts into sub_effects.py and Globals for simpler function calls (bad idea?)
+    # pass global parts into sub_effects and Globals for simpler function calls.
     sub_effects.renderer = renderer
     sub_effects.settings = settings
     sub_effects.screen = screen
@@ -193,8 +193,7 @@ def main(settings, screen): # TODO: redesign fades.
     # EFFECTS SECTION - controls 1-9.
     # make instances of classes in subeffects.py in effects.
     effects = [ sub_effects.Stars(400, 1, 4),
-                sub_effects.SweepSprite("large_frozen_earth.png", (settings.get_center()), 1, 400, 2),  
-                sub_effects.ArcSprite("large_frozen_earth.png", (screen.size[0]//2, 300), 0, 200, 0.5, 144),
+                sub_effects.SweepSprite("town2.png", (1000, 600), 0.5, 400, 0),  
                 sub_effects.ArcSprite("large_frozen_earth.png", (screen.size[0]//2, 300), 0, 200, 0.5, 216),
                 sub_effects.ArcSprite("large_frozen_earth.png", (screen.size[0]//2, 300), 0, 200, 0.5, 288),
                 sub_effects.Sprite("large_frozen_earth.png", (0,0), 10, 1),
@@ -245,6 +244,7 @@ def main(settings, screen): # TODO: redesign fades.
                 for i, ef in enumerate(effects):
                     if ef.__class__.__name__ == "Spotlight":
                         control_index = i
+                        break
 
             elif e.type == pygame.KEYDOWN:
 
@@ -298,7 +298,8 @@ def main(settings, screen): # TODO: redesign fades.
                     while not (hasattr(effects[control_index], "move") or hasattr(effects[control_index], "resize")) or not effects[control_index].opacity:
                         control_index = (control_index + direction) % len(effects)
                         counter += 1
-                        if counter >= len(effects): break
+                        if counter >= len(effects):
+                            break
                     print(f"current control key: {control_index + 1}") # which button to press to enable this one.
                     
                 # show next text line / hide current one
@@ -333,33 +334,20 @@ def main(settings, screen): # TODO: redesign fades.
 
         # RESIZING CONTROL SECTION
         resize_factor = 0
-        direction = (0,0)
         pressed = pygame.key.get_pressed()
         if pressed[pygame.K_PLUS] or pressed[pygame.K_MINUS]:
             resize_factor += 0.01 if pressed[pygame.K_PLUS] else -0.01
 
         # MOVEMENT CONTROL SECTION
-        if pressed[pygame.K_i] or pressed[pygame.K_j] or pressed[pygame.K_k] or pressed[pygame.K_l]:
-
-            # first diagonal checks.
-            if pressed[pygame.K_i] and pressed[pygame.K_j]:
-                direction = (-control_speed,-control_speed)
-            elif pressed[pygame.K_i] and pressed[pygame.K_l]:
-                direction = (control_speed,-control_speed)
-            elif pressed[pygame.K_l] and pressed[pygame.K_k]:
-                direction = (control_speed,control_speed)
-            elif pressed[pygame.K_k] and pressed[pygame.K_j]:
-                direction = (-control_speed,control_speed)
-            
-            # then the axes.
-            elif pressed[pygame.K_i]:
-                direction = (0,-control_speed)
-            elif pressed[pygame.K_l]:
-                direction = (control_speed,0)
-            elif pressed[pygame.K_k]:
-                direction = (0,control_speed)
-            elif pressed[pygame.K_j]:
-                direction = (-control_speed,0)
+        direction = [0,0]
+        if pressed[pygame.K_i]:
+            direction[1] -= control_speed
+        if pressed[pygame.K_j]:
+            direction[0] -= control_speed
+        if pressed[pygame.K_k]:
+            direction[1] += control_speed
+        if pressed[pygame.K_l]:
+            direction[0] += control_speed
     
         # resize selected control surface.
         for ef in effects:
