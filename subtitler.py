@@ -5,23 +5,16 @@ from itertools import product
 from math import ceil
 import sub_effects
 
-# every class has functions with a need to access these.
-# they are also singletons, so this makes *some* sense.
-class Globals:
-    settings = None
-    screen = None
-    renderer = None
-
 class Settings:
 
     def __init__(self, folder, defaultres):
         self.resolution = defaultres
-        self.hub_path = os.path.dirname(os.path.realpath(__file__)) + "/pics/"
+        self.path = os.path.dirname(os.path.realpath(__file__)) + "/"
         self.image_set = folder # name of the directory
-        self.path = self.hub_path + folder # actual path of the directory
-        self.images = os.listdir(self.path) # list of filenames.
+        self.img_path = self.path + "pics/" + folder + "/" # actual path of the directory
+        self.images = os.listdir(self.img_path) # list of filenames.
         self.speed = 15
-        self.img_width, self.img_height = pygame.image.load(self.path + "/" + self.images[0]).get_size()
+        self.img_width, self.img_height = pygame.image.load(self.img_path + self.images[0]).get_size()
         self.x = ceil(self.resolution[0] / self.img_width) # number of tiles.
         self.y = ceil(self.resolution[1] / self.img_height)
         self.center = self.get_center()
@@ -40,40 +33,40 @@ class Settings:
         self.rng_factor = (self.fps * self.speed) // 10
 
     def next_background(self, direction):
-        self.backgrounds = os.listdir(self.hub_path + "backgrounds")
+        self.backgrounds = os.listdir(self.path + "backgrounds/")
         if len(self.backgrounds) > 0:
             if self.background == None:
-                self.pygame_background = pygame.image.load(self.hub_path + "backgrounds/" + self.backgrounds[0])
+                self.pygame_background = pygame.image.load(self.path + "backgrounds/" + self.backgrounds[0])
             else:
                 self.bg_index = (self.bg_index + direction) % len(self.backgrounds)
-                self.pygame_background = pygame.image.load(self.hub_path + "backgrounds/" + self.backgrounds[self.bg_index])
+                self.pygame_background = pygame.image.load(self.path + "backgrounds/" + self.backgrounds[self.bg_index])
 
     def next_spotlight(self, direction): # carbon copy of the background function, TODO: combine.
-        spotlights = os.listdir("./spotlights")
+        spotlights = os.listdir(self.path + "spotlights")
         self.spotlight_index = (self.spotlight_index + direction) % len(spotlights)
-        return pygame.image.load("./spotlights/" + spotlights[self.spotlight_index])
+        return pygame.image.load(self.path + "spotlights/" + spotlights[self.spotlight_index])
 
     def render_background(self):
-        self.background = pygame._sdl2.Texture.from_surface(Globals.renderer, self.pygame_background)
+        self.background = pygame._sdl2.Texture.from_surface(renderer, self.pygame_background)
 
 class DisplayFrame:
 
     TEXTURES = []
 
     def __init__(self):
-        self.index = randint(0,len(Globals.settings.images)-1)
+        self.index = randint(0,len(settings.images)-1)
         if not DisplayFrame.TEXTURES: # first instance loads imageset.
             DisplayFrame.load_new_imageset()
 
     def give_textures(self): # load image and draw.
-        if randint(0,Globals.settings.rng_factor) == 0: # 10 -> 1 flip/sec, 100 -> 0.01 flips/sec.
-            self.index = randint(0,len(Globals.settings.images) - 1)
+        if randint(0,settings.rng_factor) == 0: # 10 -> 1 flip/sec, 100 -> 0.01 flips/sec.
+            self.index = randint(0,len(settings.images) - 1)
         return self.TEXTURES[self.index]
 
     @classmethod
     def load_new_imageset(self):
-        pygame_images = [pygame.image.load(Globals.settings.path + "/" + Globals.settings.images[i]) for i in range(0, len(Globals.settings.images))]
-        DisplayFrame.TEXTURES = [pygame._sdl2.Texture.from_surface(Globals.renderer, image) for image in pygame_images]
+        pygame_images = [pygame.image.load(settings.img_path + "/" + settings.images[i]) for i in range(0, len(settings.images))]
+        DisplayFrame.TEXTURES = [pygame._sdl2.Texture.from_surface(renderer, image) for image in pygame_images]
 
 class Text:
 
@@ -90,7 +83,7 @@ class Text:
         self.speaker_height = 120
 
     def update_font_size(self): # linear function: font_size is 40 at width 1500, 60 at 2000.
-        self.font_size = (Globals.screen.size[0] - 500) // 25
+        self.font_size = (screen.size[0] - 500) // 25
         
     # creates a bunch of temporary Surfaces that are then rendered into Texture and Rect objects.
     def load_surfaces(self):
@@ -116,19 +109,19 @@ class Text:
             self.speaker_height = box_surfs[1].get_height()*1.3 # rough placement.
             text_rects.append(speaker_surf.get_rect(center=(x,y-self.speaker_height)))
             box_rects.append(speaker_box.get_rect(center=(x,y-self.speaker_height)))
-        self.texts = {pygame._sdl2.Texture.from_surface(Globals.renderer, text_surf): text_rect for text_surf, text_rect in zip(text_surfs, text_rects)}
-        self.boxes = {pygame._sdl2.Texture.from_surface(Globals.renderer, box_surf): box_rect for box_surf, box_rect in zip(box_surfs, box_rects)}
+        self.texts = {pygame._sdl2.Texture.from_surface(renderer, text_surf): text_rect for text_surf, text_rect in zip(text_surfs, text_rects)}
+        self.boxes = {pygame._sdl2.Texture.from_surface(renderer, box_surf): box_rect for box_surf, box_rect in zip(box_surfs, box_rects)}
 
     def give_textures(self):
         return self.texts, self.boxes
         
     def read_messages(self): # find dirname.txt or create one if missing.
-        filename = settings.hub_path + "/" + settings.image_set + ".txt"
+        filename = settings.path + "pics/" + settings.image_set + ".txt"
         if os.path.isfile(filename):
             with open(filename) as f:
                 self.messages = f.readlines()
         else:
-            open(settings.hub_path + "/" + settings.image_set + ".txt", "a").close() # create missing file.
+            open(settings.path + "pics/" + settings.image_set + ".txt", "a").close() # create missing file.
 
     def next_message(self): # load current index message, generate text surfaces and rects, then iterate index.
         if not self.messages:
@@ -156,9 +149,9 @@ def load_next_directory(text, settings):
         settings.current_index = (settings.current_index + 1) % len(settings.directory_list)
         try: # new directory and image data.
             settings.image_set = settings.directory_list[settings.current_index]
-            settings.images = os.listdir(settings.hub_path + settings.image_set)
-            settings.path = settings.hub_path + settings.image_set
-            settings.img_width, settings.img_height = pygame.image.load(settings.path + "/" + settings.images[0]).get_size()
+            settings.images = os.listdir(settings.path + "pics/" + settings.image_set)
+            settings.img_path = settings.path + "pics/" + settings.image_set
+            settings.img_width, settings.img_height = pygame.image.load(settings.img_path + "/" + settings.images[0]).get_size()
             settings.x = ceil(screen.size[0] / settings.img_width) 
             settings.y = ceil(screen.size[1] / settings.img_height)
             break
@@ -176,22 +169,18 @@ def create_displays(settings): # tiling via x-tile * y-tile DisplayFrame objects
     pos = [(0 + off[0] * settings.img_width, 0 + off[1] * settings.img_height) for off in offset]
     return displays, pos
 
-def main(settings, screen): # TODO: redesign fades.
+def main(settings, screen, renderer): # TODO: redesign fades.
 
     # pygame components, including SDL2 rendering.
     clock = pygame.time.Clock()
-    renderer = pygame._sdl2.Renderer(screen, vsync=True)
     buffer = pygame._sdl2.Texture(renderer, settings.resolution, target=True)
     buffer.blend_mode = 1
 
-    # pass global parts into sub_effects and Globals for simpler function calls.
+    # pass global parts into sub_effects
     sub_effects.renderer = renderer
     sub_effects.settings = settings
     sub_effects.screen = screen
     sub_effects.buffer = buffer
-    Globals.renderer = renderer
-    Globals.settings = settings
-    Globals.screen = screen
 
     # EFFECTS SECTION - controls 1-9.
     # make instances of classes in subeffects.py in effects.
@@ -303,10 +292,10 @@ def main(settings, screen): # TODO: redesign fades.
                 elif e.key in {x+49 for x in range(0,10)} and effects:
                     try:
                         effects[e.key-49].toggle()
-                        if effects[e.key-49].opacity: # if is on.
+                        if effects[e.key-49].opacity > 0:
                             control_index = e.key - 49
-                    except Exception as e:
-                        print(f"Not enough items in effects list: {e}")
+                    except:
+                        print(f"Not enough items in effects list.")
 
                 # cycle through controllable surfaces
                 elif e.key in (pygame.K_PAGEDOWN, pygame.K_PAGEUP) and effects:
@@ -354,7 +343,7 @@ def main(settings, screen): # TODO: redesign fades.
         resize_factor = 0
         pressed = pygame.key.get_pressed()
         if pressed[pygame.K_PLUS] or pressed[pygame.K_MINUS]:
-            resize_factor += 0.01 if pressed[pygame.K_PLUS] else -0.01
+            resize_factor += 0.01 if pressed[pygame.K_PLUS] else -0.01 # one percent.
             
         # MOVEMENT CONTROL SECTION
         direction = [0,0]
@@ -382,19 +371,19 @@ def main(settings, screen): # TODO: redesign fades.
         renderer.present() 
         clock.tick(settings.fps)
 
-# remopve text files that are left behind.
 def delete_old_textfiles(directory, dirnames):
     files = [file for file in os.listdir(directory) if ".txt" in file]
     for filename in files:
         if filename[:-4] not in dirnames:
             os.remove(directory + filename)
 
+# we create settings, screen, renderer here so that they are globally accessible.
 if __name__ == "__main__":
-
+ 
     pygame.init()
 
     # STARTUP CONFIGURATION - directory choice and resolution.
-    # you want to put all the image directories into ./pics, 'tmp' ignored, 'backgrounds' only used for 'b' to enable background.
+    # you want to put all the image directories into ./pics, 'tmp' ignored.
     possible_directories = []
     hub_path = os.path.dirname(os.path.realpath(__file__)) + "/pics/"
     dir_names = os.listdir(hub_path)
@@ -431,5 +420,6 @@ if __name__ == "__main__":
 
     delete_old_textfiles(hub_path, dir_names)
     print("Current resolution: %s x %s" %(settings.resolution))
+    renderer = pygame._sdl2.Renderer(screen, vsync=True)
 
-    main(settings, screen)
+    main(settings, screen, renderer)

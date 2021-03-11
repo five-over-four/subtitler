@@ -146,7 +146,7 @@ class Stars:
 class Spotlight:
     def __init__(self, light_texture, radius):
         self.radius = radius
-        self.light = pygame.image.load("./spotlights/" + light_texture)
+        self.light = pygame.image.load(os.path.dirname(os.path.realpath(__file__)) + "/spotlights/" + light_texture)
         self.opacity = 0
 
     def update(self):
@@ -166,31 +166,3 @@ class Spotlight:
     def toggle(self):
         self.opacity = 1 if self.opacity == 0 else 0
         print(f"Spot is {self.opacity > 0}")
-
-class LegacySpotlight: # keeping for now.
-
-    def __init__(self, radius):
-        self.cover = pygame.Surface(settings.resolution)
-        self.cover.fill(0)
-        self.rect = (0,0)
-        self.cover.set_colorkey((255,255,255))
-        self.pos = (0,0)
-        self.radius = radius
-        pygame.draw.circle(self.cover, (255,255,255), self.pos, self.radius)
-        self.TEXTURE = pygame._sdl2.Texture.from_surface(renderer, self.cover)
-        self.opacity = 0
-
-    def update(self):
-        if self.opacity > 0:
-            self.cover.fill(0)
-            self.pos = pygame.mouse.get_pos()
-            pygame.draw.circle(self.cover, (255,255,255), self.pos, self.radius)
-            self.TEXTURE = pygame._sdl2.Texture.from_surface(renderer, self.cover)
-            return {"dstrect": self.rect}
-
-    def resize(self, order):
-        self.radius *= 1 + order / 2
-
-    def toggle(self):
-        self.opacity = 255 if self.opacity == 0 else 0
-        print(f"Spotlight is {self.opacity > 0}")
