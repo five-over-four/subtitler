@@ -156,9 +156,12 @@ class Spotlight:
     def shine(self, lightbeam): # new texture every frame - expensive.
         self.cover = pygame.Surface(screen.size)
         self.cover.fill(0)
-        self.cover.blit(self.light, tuple([x - self.radius for x in pygame.mouse.get_pos()]))
+        self.cover.blit(pygame.transform.scale(self.light, (self.radius*2,self.radius*2)), tuple([x - self.radius for x in pygame.mouse.get_pos()]))
         self.TEXTURE = pygame._sdl2.Texture.from_surface(renderer, self.cover)
         self.TEXTURE.blend_mode = 4
+
+    def resize(self, order):
+        self.radius = round(self.radius * (1 + order))
 
     def toggle(self):
         self.opacity = 1 if self.opacity == 0 else 0

@@ -12,9 +12,9 @@ Draws spinning (possible spin speed 0), scalable (keys 0 and +) .png image that 
 Produces n white circles on the screen, sized between minsize and maxsize in radius. A starry sky.
 
 ## Spotlight
-Makes a spotlight: hides flickering images under a black screen, and shows them only through a circle on your cursor. Can be resized with +/-.
+As shown in the image below. Follows the cursor. Toggle with mouse buttons and resize with +/-.
 
-![Spotlight](https://i.imgur.com/x5Ze0J0.png)
+![Spotlight](https://i.imgur.com/fZnm9nj.png)
 
 # Usage
 Place any effects as instances of these classes into the 'effects' list in the main function.

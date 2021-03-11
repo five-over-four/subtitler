@@ -218,13 +218,13 @@ def main(settings, screen): # TODO: redesign fades.
         if settings.bg_on:
             settings.background.draw(dstrect=(0,0))
 
+        if spotlight.opacity > 0:
+            spotlight.update()
+
         # draw effects on top
         for ef in effects:
             if ef.opacity > 0:
                 ef.TEXTURE.draw(**ef.update())
-
-        if spotlight.opacity > 0:
-            spotlight.update()
 
         # draw text and boxes
         if text.text_alpha > 0 and text.message:
@@ -361,9 +361,11 @@ def main(settings, screen): # TODO: redesign fades.
             ef = effects[control_index]
             if hasattr(ef, "move"):
                 ef.move(direction)
-            if hasattr(ef, "resize"):
+            if spotlight.opacity > 0:
+                spotlight.resize(resize_factor) # takes precedent sprites.
+            elif hasattr(ef, "resize"):
                 ef.resize(resize_factor)
-            
+                
         renderer.target = None
         buffer.draw()
         renderer.present() 
