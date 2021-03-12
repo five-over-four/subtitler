@@ -186,9 +186,9 @@ def main(settings, screen, renderer): # TODO: redesign fades.
     # make instances of classes in subeffects.py in effects.
     spotlight = sub_effects.Spotlight("light.png")
     effects = [ sub_effects.Stars(400, 1, 4),
-                sub_effects.ArcSprite("large_frozen_earth.png", origin=(screen.size[0]//2, 300), spin_speed=0, radius=500, speed=5, start_angle=216),
-                sub_effects.ArcSprite("large_frozen_earth.png", (screen.size[0]//2, 300), 0, 200, 0.5, 288),
-                sub_effects.Sprite("large_frozen_earth.png", (0,0), 10, 1)]
+                sub_effects.ArcSprite("large_frozen_earth.png", origin=(screen.size[0]//2, 300), spin_speed=0, axes=(200,600), speed=5, start_angle=216),
+                sub_effects.Sprite("large_frozen_earth.png", (0,0), 10, 1),
+                sub_effects.SweepSprite("town.png", (1000,540), 200, 1, 0)]
 
     displays, pos = create_displays(settings)
     text = Text()
@@ -212,12 +212,12 @@ def main(settings, screen, renderer): # TODO: redesign fades.
         if settings.overlay_on: # overlay.
             settings.overlay.draw(dstrect=(0,0))
 
-        if spotlight.opacity > 0:
-            spotlight.update()
-
         for ef in effects:
             if ef.opacity > 0:
                 ef.TEXTURE.draw(**ef.update())
+
+        if spotlight.opacity < 255: # uses additive blending => inverted alpha values.
+            spotlight.draw()
 
         if text.text_alpha > 0 and text.message:
             for box in text.boxes:
@@ -233,12 +233,13 @@ def main(settings, screen, renderer): # TODO: redesign fades.
             if e.type == pygame.QUIT:
                 exit()
 
-            elif e.type == pygame.MOUSEBUTTONDOWN: # focus spotlight on click for zooming.
-                if e.button == 1:
+            # spotlight controls
+            elif e.type == pygame.MOUSEBUTTONDOWN:
+                if e.button == 1: # left click
                     spotlight.toggle()
-                elif e.button == 4:
+                elif e.button == 4: # scroll up (i think?)
                     spotlight.light = settings.next_spotlight(1)
-                elif e.button == 5:
+                elif e.button == 5: # scroll down
                     spotlight.light = settings.next_spotlight(-1)
 
             elif e.type == pygame.KEYDOWN:
@@ -358,7 +359,7 @@ def main(settings, screen, renderer): # TODO: redesign fades.
             ef = effects[control_index]
             if hasattr(ef, "move"):
                 ef.move(direction)
-            if spotlight.opacity > 0: # takes precedent over sprites.
+            if spotlight.opacity < 255: # takes precedent over sprites.
                 spotlight.resize(resize_factor)
             elif hasattr(ef, "resize"):
                 ef.resize(resize_factor)
@@ -374,11 +375,7 @@ def delete_old_textfiles(directory, dirnames):
         if filename[:-4] not in dirnames:
             os.remove(directory + filename)
 
-# we create settings, screen, renderer here so that they are globally accessible.
-if __name__ == "__main__":
- 
-    pygame.init()
-
+def config():
     # STARTUP CONFIGURATION - directory choice and resolution.
     # you want to put all the image directories into ./pics, 'tmp' ignored.
     possible_directories = []
@@ -419,4 +416,12 @@ if __name__ == "__main__":
     print("Current resolution: %s x %s" %(settings.resolution))
     renderer = pygame._sdl2.Renderer(screen, vsync=True)
 
+    return settings, screen, renderer
+
+# we create settings, screen, renderer here so that they are globally accessible.
+if __name__ == "__main__":
+ 
+    pygame.init()
+    # these are made global as singleton class instances needed everywhere.
+    settings, screen, renderer = config()
     main(settings, screen, renderer)

@@ -64,16 +64,16 @@ class Sprite:
 # animates a sprite on a circular path while spinning.
 class ArcSprite(Sprite):
 
-    def __init__(self, item, origin, spin_speed, radius, speed, start_angle):
+    def __init__(self, item, origin, spin_speed, axes, speed, start_angle):
         super().__init__(item, origin, 10, spin_speed)
         self.origin = origin
-        self.radius = radius
+        self.axes = axes
         self.speed = speed
         self.phi = start_angle
 
     def arc_pos(self):
-        x = self.radius * cos(self.phi * pi / 180) + self.origin[0]
-        y = self.radius * 0.5 * sin(self.phi * pi / 180) + self.origin[1]
+        x = self.axes[0] * cos(self.phi * pi / 180) + self.origin[0]
+        y = self.axes[1] * 0.5 * sin(self.phi * pi / 180) + self.origin[1]
         return (x,y)
 
     def automate_movement(self):
@@ -141,29 +141,36 @@ class Stars:
         self.opacity += self.fade_speed
         print(f"Stars is {self.fade_speed > 0}")
 
-# improved spotlight using additive alpha blending.
-# use any texture. black = opaque, white = transparent.
+# improved spotlight using additive alpha blending. use any texture.
 class Spotlight:
     def __init__(self, light_texture):
+        self.cover = pygame.Surface(screen.size)
         self.light = pygame.image.load(os.path.dirname(os.path.realpath(__file__)) + "/spotlights/" + light_texture)
         self.w, self.h = self.light.get_size()
-        self.opacity = 0
+        self.opacity = 255
+        self.fade_speed = 3
 
-    def update(self):
+    def draw(self):
         self.shine(self.light)
         self.TEXTURE.draw(dstrect=(0,0))
 
     def shine(self, lightbeam): # new texture every frame - expensive.
-        self.cover = pygame.Surface(screen.size)
-        self.cover.fill(0)
+        self.opacity += self.fade_speed
+        if self.opacity > 255:
+            self.opacity = 255
+        elif self.opacity < 0:
+            self.opacity = 0
+        self.cover.fill((self.opacity,)*3)
         x, y = pygame.mouse.get_pos()
-        self.cover.blit(pygame.transform.scale(self.light, (self.w, self.h)), (x - self.w // 2, y - self.h // 2))
+        if self.opacity == 0:
+            self.cover.blit(pygame.transform.scale(self.light, (self.w, self.h)), (x - self.w // 2, y - self.h // 2))
         self.TEXTURE = pygame._sdl2.Texture.from_surface(renderer, self.cover)
-        self.TEXTURE.blend_mode = 4 
+        self.TEXTURE.blend_mode = 4
 
     def resize(self, order):
         self.w, self.h = round(self.w * (1 + order)), round(self.h * (1 + order))
 
     def toggle(self):
-        self.opacity = 1 if self.opacity == 0 else 0
+        self.fade_speed *= -1
+        self.opacity += self.fade_speed
         print(f"Spot is {self.opacity > 0}")
