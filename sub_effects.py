@@ -12,12 +12,12 @@ screen = None
 
 class Sprite:
 
-    def __init__(self, item, pos, fade_speed, spin_speed=0):
+    def __init__(self, item, pos, fade_speed, spin_speed=0, control_speed=5):
         self.img_ref = pygame.image.load(effects + item) # reference image
         self.size = self.img_ref.get_size()
         self.TEXTURE = pygame._sdl2.Texture.from_surface(renderer, self.img_ref)
         self.spin_speed = spin_speed
-        self.control_speed = 5
+        self.control_speed = control_speed
         self.pos = pos
         self.scale = 1.0 # this maintains aspect ratio by *not* directly manipulating size.
         self.w, self.h = self.img_ref.get_size()
@@ -64,7 +64,7 @@ class Sprite:
 # animates a sprite on a circular path while spinning.
 class ArcSprite(Sprite):
 
-    def __init__(self, item, origin, spin_speed, axes, speed, start_angle):
+    def __init__(self, item, origin, axes=(300,300), speed=0.5, start_angle=0, spin_speed=0):
         super().__init__(item, origin, 10, spin_speed)
         self.origin = origin
         self.axes = axes
@@ -73,7 +73,7 @@ class ArcSprite(Sprite):
 
     def arc_pos(self):
         x = self.axes[0] * cos(self.phi * pi / 180) + self.origin[0]
-        y = self.axes[1] * 0.5 * sin(self.phi * pi / 180) + self.origin[1]
+        y = self.axes[1] * sin(self.phi * pi / 180) + self.origin[1]
         return (x,y)
 
     def automate_movement(self):
@@ -82,15 +82,15 @@ class ArcSprite(Sprite):
         self.rect.center = self.pos
 
 class SweepSprite(Sprite): # back and forth.
-    def __init__(self, item, origin, rate, radius, spin_speed):
+    def __init__(self, item, origin, rate=0.5, width=300, spin_speed=0):
         super().__init__(item, origin, 10, spin_speed)
         self.origin = origin
-        self.radius = radius
+        self.width = width
         self.rate = rate
         self.phi = 0
 
     def sway_pos(self):
-        x = self.radius * sin(self.phi * pi / 180) + self.origin[0]
+        x = self.width * sin(self.phi * pi / 180) + self.origin[0]
         y = self.origin[1]
         return (x,y)
 
@@ -101,7 +101,7 @@ class SweepSprite(Sprite): # back and forth.
 # draw random-sized small circles at random positions.
 class Stars:
 
-    def __init__(self, n, minsize, maxsize):
+    def __init__(self, n, minsize=1, maxsize=4):
         self.rect = (0,0)
         self.opacity = 0
         self.fade_speed = -3
@@ -176,7 +176,7 @@ class Spotlight:
 
 # 4 (or 8) directions. like in a video game.
 class SpriteSheet:
-    def __init__(self):
+    def __init__(self, speed = 3):
         path = os.path.dirname(os.path.realpath(__file__)) + "/directional_sprites"
         images = os.listdir(path)
         self.images = [pygame.image.load(path + "/" + image) for image in images]
@@ -185,7 +185,7 @@ class SpriteSheet:
         self.directions = [(1,0), (0,1), (-1,0), (0,-1)] # right, down, left, up.
         self.TEXTURES = {key: pygame._sdl2.Texture.from_surface(renderer, image) for key, image in zip(self.directions, self.images)}
         self.TEXTURE = self.TEXTURES[(1,0)] # start right.
-        self.speed = 3
+        self.speed = speed
         self.opacity = 0
 
     def update(self):

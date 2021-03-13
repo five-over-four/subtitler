@@ -193,7 +193,8 @@ def main(settings, screen, renderer): # TODO: redesign fades.
                 sub_effects.ArcSprite("large_frozen_earth.png", origin=(screen.size[0]//2, 300), spin_speed=0, axes=(200,600), speed=5, start_angle=216),
                 sub_effects.Sprite("large_frozen_earth.png", (0,0), 10, 1),
                 sub_effects.SweepSprite("town.png", (1000,540), 200, 1, 0),
-                sub_effects.SpriteSheet()]
+                sub_effects.SpriteSheet(),
+                sub_effects.ArcSprite(("moon_oil.png"), settings.center)]
 
     displays, pos = create_displays(settings)
     text = Text()
@@ -294,7 +295,7 @@ def main(settings, screen, renderer): # TODO: redesign fades.
                 elif e.key in {x+49 for x in range(0,10)} and effects:
                     try:
                         effects[e.key-49].toggle()
-                        if effects[e.key-49].opacity > 0:
+                        if effects[e.key-49].opacity > 0 and hasattr(effects[e.key-49], "move"):
                             control_index = e.key - 49
                     except:
                         print(f"Not enough items in effects list.")
