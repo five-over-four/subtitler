@@ -14,13 +14,12 @@ class Sprite:
 
     def __init__(self, item, pos, fade_speed, spin_speed=0, control_speed=5):
         self.img_ref = pygame.image.load(effects + item) # reference image
-        self.size = self.img_ref.get_size()
+        self.original_size = self.img_ref.get_size() # reference size for scaling.
+        self.w, self.h = self.original_size
         self.TEXTURE = pygame._sdl2.Texture.from_surface(renderer, self.img_ref)
         self.spin_speed = spin_speed
         self.control_speed = control_speed
         self.pos = pos
-        self.scale = 1.0 # this maintains aspect ratio by *not* directly manipulating size.
-        self.w, self.h = self.img_ref.get_size()
         self.rect = self.img_ref.get_rect(center=self.pos)
         self.theta = 0
         self.opacity = 0
@@ -43,15 +42,12 @@ class Sprite:
         self.rect.center = self.pos
 
     def resize(self, order):
-        if order < 0 and self.scale <= 0.01: # don't crash by shrinking negative.
+        if order == 0 or (order < 0 and self.w <= 1): # don't resize too small.
             return
-        elif order == 0:
-            return
-        self.scale += order
-        self.size = (round(self.w * self.scale), round(self.h * self.scale))
-        img = pygame.transform.scale(self.img_ref, self.size)
-        self.rect = img.get_rect(center=self.pos)
-        self.TEXTURE = pygame._sdl2.Texture.from_surface(renderer, img)
+        self.w = self.w + order * 3 * self.w / self.original_size[0] * self.w/self.h # aspect ratio.
+        self.h = self.h + order * 3 * self.h / self.original_size[1]
+        self.rect = pygame.Rect(*self.pos, self.w, self.h)
+        self.rect.center = self.pos
 
     def automate_movement(self): # for inheritance.
         pass
@@ -145,6 +141,7 @@ class Spotlight:
     def __init__(self, light_texture, resolution):
         self.cover = pygame.Surface(resolution)
         self.light = pygame.image.load(os.path.dirname(os.path.realpath(__file__)) + "/spotlights/" + light_texture)
+        self.original_size = self.light.get_size() # we use this to control the 1/r scaling.
         self.w, self.h = self.light.get_size()
         self.opacity = 255
         self.fade_speed = 3
@@ -162,14 +159,18 @@ class Spotlight:
         self.cover.fill((self.opacity,)*3)
         x, y = pygame.mouse.get_pos()
         if self.opacity == 0:
-            self.cover.blit(pygame.transform.scale(self.light, (self.w, self.h)), (x - self.w // 2, y - self.h // 2))
+            self.cover.blit(pygame.transform.scale(self.light, (round(self.w), round(self.h))), (x - self.w // 2, y - self.h // 2))
         self.TEXTURE = pygame._sdl2.Texture.from_surface(renderer, self.cover)
         self.TEXTURE.blend_mode = 4
 
     def resize(self, order):
-        self.w, self.h = round(self.w * (1 + order)), round(self.h * (1 + order))
+        if self.w >= 1 and self.h >= 1:
+            self.w = self.w + order * (self.w / self.original_size[0])
+            self.h = self.w + order * (self.h / self.original_size[1])
 
     def toggle(self):
+        if self.opacity == 0 and self.cover.get_size() != screen.size: # resize.
+            self.cover = pygame.Surface(settings.resolution)
         self.fade_speed *= -1
         self.opacity += self.fade_speed
         print(f"Spot is {self.opacity > 0}")

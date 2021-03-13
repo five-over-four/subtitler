@@ -346,7 +346,7 @@ def main(settings, screen, renderer): # TODO: redesign fades.
         resize_factor = 0
         pressed = pygame.key.get_pressed()
         if pressed[pygame.K_PLUS] or pressed[pygame.K_MINUS]:
-            resize_factor += 0.01 if pressed[pygame.K_PLUS] else -0.01 # one percent.
+            resize_factor += 1 if pressed[pygame.K_PLUS] else -1
             
         # MOVEMENT CONTROL SECTION
         direction = [0,0]
