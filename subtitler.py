@@ -10,7 +10,7 @@ class Settings:
     def __init__(self, folder, defaultres):
         self.resolution = defaultres
         self.path = os.path.dirname(os.path.realpath(__file__)) + "/"
-        self.image_set = folder # name of the directory
+        self.image_set = folder # name of current image directory
         self.img_path = self.path + "pics/" + folder + "/" # actual path of the directory
         self.images = os.listdir(self.img_path) # list of filenames.
         self.speed = 15
@@ -22,9 +22,9 @@ class Settings:
         self.rng_factor = (self.fps * self.speed) // 10 # how often images switch randomly.
         self.overlay = None
         self.next_overlay(1) # 1 means 'forward', -1 'backward'.
-        self.overlay_index = 0
         self.overlay_on = False
-        self.spotlight_index = 0
+        self.spotlight = None
+        self.next_spotlight(1)
 
     def get_center(self):
         return (self.resolution[0] // 2, self.resolution[1] // 2)
@@ -35,16 +35,22 @@ class Settings:
     def next_overlay(self, direction):
         self.overlays = os.listdir(self.path + "overlays/")
         if len(self.overlays) > 0:
-            if self.overlay == None:
+            if not self.overlay:
                 self.pygame_overlay = pygame.image.load(self.path + "overlays/" + self.overlays[0])
+                self.overlay_index = 0
             else:
                 self.overlay_index = (self.overlay_index + direction) % len(self.overlays)
                 self.pygame_overlay = pygame.image.load(self.path + "overlays/" + self.overlays[self.overlay_index])
 
-    def next_spotlight(self, direction): # carbon copy of the overlay function, TODO: combine.
-        spotlights = os.listdir(self.path + "spotlights")
-        self.spotlight_index = (self.spotlight_index + direction) % len(spotlights)
-        return pygame.image.load(self.path + "spotlights/" + spotlights[self.spotlight_index])
+    def next_spotlight(self, direction): # carbon copy of next_overlay; combine somehow.
+        spotlights = os.listdir(self.path + "spotlights/")
+        if len(spotlights) > 0:
+            if not self.spotlight:
+                self.spotlight = sub_effects.Spotlight(spotlights[0], self.resolution)
+                self.spotlight_index = 0
+            else:
+                self.spotlight_index = (self.spotlight_index + direction) % len(spotlights)
+                self.spotlight.light = pygame.image.load(self.path + "spotlights/" + spotlights[self.spotlight_index])
 
     def render_overlay(self):
         self.overlay = pygame._sdl2.Texture.from_surface(renderer, self.pygame_overlay)
@@ -180,15 +186,14 @@ def main(settings, screen, renderer): # TODO: redesign fades.
     sub_effects.renderer = renderer
     sub_effects.settings = settings
     sub_effects.screen = screen
-    sub_effects.buffer = buffer
 
     # EFFECTS SECTION - controls 1-9.
     # make instances of classes in subeffects.py in effects.
-    spotlight = sub_effects.Spotlight("light.png")
     effects = [ sub_effects.Stars(400, 1, 4),
                 sub_effects.ArcSprite("large_frozen_earth.png", origin=(screen.size[0]//2, 300), spin_speed=0, axes=(200,600), speed=5, start_angle=216),
                 sub_effects.Sprite("large_frozen_earth.png", (0,0), 10, 1),
-                sub_effects.SweepSprite("town.png", (1000,540), 200, 1, 0)]
+                sub_effects.SweepSprite("town.png", (1000,540), 200, 1, 0),
+                sub_effects.SpriteSheet()]
 
     displays, pos = create_displays(settings)
     text = Text()
@@ -196,7 +201,6 @@ def main(settings, screen, renderer): # TODO: redesign fades.
     text_show = False
     fade_time = 0 # this acts as both a boolean and counter.
     fade_duration = settings.fps // 5 # 1/x seconds.
-    control_speed = 5 # TODO: implement acceleration
     control_index = 0
     fullscreen_toggle = False # no 'screen.is_fullscreen' in SDL2, need this.
 
@@ -216,8 +220,8 @@ def main(settings, screen, renderer): # TODO: redesign fades.
             if ef.opacity > 0:
                 ef.TEXTURE.draw(**ef.update())
 
-        if spotlight.opacity < 255: # uses additive blending => inverted alpha values.
-            spotlight.draw()
+        if settings.spotlight.opacity < 255: # uses additive blending => inverted alpha values.
+            settings.spotlight.draw()
 
         if text.text_alpha > 0 and text.message:
             for box in text.boxes:
@@ -236,11 +240,11 @@ def main(settings, screen, renderer): # TODO: redesign fades.
             # spotlight controls
             elif e.type == pygame.MOUSEBUTTONDOWN:
                 if e.button == 1: # left click
-                    spotlight.toggle()
+                    settings.spotlight.toggle()
                 elif e.button == 4: # scroll up (i think?)
-                    spotlight.light = settings.next_spotlight(1)
+                    settings.next_spotlight(1)
                 elif e.button == 5: # scroll down
-                    spotlight.light = settings.next_spotlight(-1)
+                    settings.next_spotlight(-1)
 
             elif e.type == pygame.KEYDOWN:
 
@@ -346,21 +350,21 @@ def main(settings, screen, renderer): # TODO: redesign fades.
         # MOVEMENT CONTROL SECTION
         direction = [0,0]
         if pressed[pygame.K_i]:
-            direction[1] -= control_speed
+            direction[1] -= 1
         if pressed[pygame.K_j]:
-            direction[0] -= control_speed
+            direction[0] -= 1
         if pressed[pygame.K_k]:
-            direction[1] += control_speed
+            direction[1] += 1
         if pressed[pygame.K_l]:
-            direction[0] += control_speed
+            direction[0] += 1
 
         # apply controls
         if effects:
             ef = effects[control_index]
             if hasattr(ef, "move"):
                 ef.move(direction)
-            if spotlight.opacity < 255: # takes precedent over sprites.
-                spotlight.resize(resize_factor)
+            if settings.spotlight.opacity < 255: # takes precedent over sprites.
+                settings.spotlight.resize(resize_factor)
             elif hasattr(ef, "resize"):
                 ef.resize(resize_factor)
                 
@@ -375,9 +379,9 @@ def delete_old_textfiles(directory, dirnames):
         if filename[:-4] not in dirnames:
             os.remove(directory + filename)
 
+# STARTUP CONFIGURATION - directory choice and resolution.
+# you want to put all the image directories into ./pics, 'tmp' ignored.
 def config():
-    # STARTUP CONFIGURATION - directory choice and resolution.
-    # you want to put all the image directories into ./pics, 'tmp' ignored.
     possible_directories = []
     hub_path = os.path.dirname(os.path.realpath(__file__)) + "/pics/"
     dir_names = os.listdir(hub_path)
@@ -392,8 +396,8 @@ def config():
 
     while "entering config":
         try:
-            dir_choice = input("Directory\n> ")
-            res_choice = input("Resolution\n> ") # width
+            dir_choice = input("Directory\n> ") # name or number
+            res_choice = input("Resolution\n> ") # width, always 16:9
             resolution = (int(res_choice)*16//9, int(res_choice))
             screen = pygame._sdl2.Window("...", size=resolution, resizable=True)
             if dir_choice.isnumeric():

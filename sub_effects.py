@@ -9,7 +9,6 @@ effects = os.path.dirname(os.path.realpath(__file__)) + "/effects/"
 renderer = None
 settings = None
 screen = None
-buffer = None
 
 class Sprite:
 
@@ -18,6 +17,7 @@ class Sprite:
         self.size = self.img_ref.get_size()
         self.TEXTURE = pygame._sdl2.Texture.from_surface(renderer, self.img_ref)
         self.spin_speed = spin_speed
+        self.control_speed = 5
         self.pos = pos
         self.scale = 1.0 # this maintains aspect ratio by *not* directly manipulating size.
         self.w, self.h = self.img_ref.get_size()
@@ -39,7 +39,7 @@ class Sprite:
         return {"dstrect": self.rect, "angle": self.theta}
 
     def move(self, diff):
-        self.pos = self.pos[0] + diff[0], self.pos[1] + diff[1]
+        self.pos = self.pos[0] + diff[0]*self.control_speed, self.pos[1] + diff[1]*self.control_speed
         self.rect.center = self.pos
 
     def resize(self, order):
@@ -120,7 +120,7 @@ class Stars:
             size = randint(self.minsize,self.maxsize)
             self.stars.append({"position": (randint(0,self.dimensions[0]), randint(0,self.dimensions[1])), "size": size})
         for star in self.stars:
-            pygame.draw.circle(self.surf, (255,255,255), star["position"], star["size"])
+            pygame.draw.circle(self.surf, (255,)*3, star["position"], star["size"])
         self.TEXTURE = pygame._sdl2.Texture.from_surface(renderer, self.surf)
 
     def update(self):
@@ -141,10 +141,9 @@ class Stars:
         self.opacity += self.fade_speed
         print(f"Stars is {self.fade_speed > 0}")
 
-# improved spotlight using additive alpha blending. use any texture.
 class Spotlight:
-    def __init__(self, light_texture):
-        self.cover = pygame.Surface(screen.size)
+    def __init__(self, light_texture, resolution):
+        self.cover = pygame.Surface(resolution)
         self.light = pygame.image.load(os.path.dirname(os.path.realpath(__file__)) + "/spotlights/" + light_texture)
         self.w, self.h = self.light.get_size()
         self.opacity = 255
@@ -174,3 +173,30 @@ class Spotlight:
         self.fade_speed *= -1
         self.opacity += self.fade_speed
         print(f"Spot is {self.opacity > 0}")
+
+# 4 (or 8) directions. like in a video game.
+class SpriteSheet:
+    def __init__(self):
+        path = os.path.dirname(os.path.realpath(__file__)) + "/directional_sprites"
+        images = os.listdir(path)
+        self.images = [pygame.image.load(path + "/" + image) for image in images]
+        self.pos = settings.center
+        self.rect = self.images[0].get_rect(center=self.pos)
+        self.directions = [(1,0), (0,1), (-1,0), (0,-1)] # right, down, left, up.
+        self.TEXTURES = {key: pygame._sdl2.Texture.from_surface(renderer, image) for key, image in zip(self.directions, self.images)}
+        self.TEXTURE = self.TEXTURES[(1,0)] # start right.
+        self.speed = 3
+        self.opacity = 0
+
+    def update(self):
+        return {"dstrect": self.rect}
+
+    def move(self, diff):
+        if diff != [0,0] and abs(diff[0]) + abs(diff[1]) <= 1:
+            self.pos = self.pos[0] + diff[0]*self.speed, self.pos[1] + diff[1]*self.speed
+            self.TEXTURE = self.TEXTURES[tuple(diff)]
+            self.rect.center = self.pos
+
+    def toggle(self):
+        self.opacity = 1 if self.opacity == 0 else 0
+        print(f"SpriteSheet is {self.opacity > 0}")
