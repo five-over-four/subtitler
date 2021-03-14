@@ -143,7 +143,6 @@ class Spotlight:
         self.cover = pygame.Surface(resolution)
         self.light = pygame.image.load(os.path.dirname(os.path.realpath(__file__)) + "/spotlights/" + light_texture)
         self.cover.set_colorkey((1,2,3)) # needed for alpha.
-        self.light.set_colorkey((1,2,3))
         self.COVER_TEXTURE = pygame._sdl2.Texture.from_surface(renderer, self.cover)
         self.TEXTURE = pygame._sdl2.Texture.from_surface(renderer, self.light)
         self.TEXTURE.blend_mode = 4

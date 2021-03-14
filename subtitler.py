@@ -43,12 +43,9 @@ class Settings:
     def next_spotlight(self, direction): # carbon copy of next_overlay; combine somehow.
         spotlights = os.listdir(self.path + "spotlights/")
         if len(spotlights) > 0:
-            if not self.spotlight:
-                self.spotlight = sub_effects.Spotlight(spotlights[0], self.resolution)
-                self.spotlight_index = 0
-            else:
-                self.spotlight_index = (self.spotlight_index + direction) % len(spotlights)
-                self.spotlight.light = pygame.image.load(self.path + "spotlights/" + spotlights[self.spotlight_index])
+            self.spotlight_index = (self.spotlight_index + direction) % len(spotlights)
+            self.spotlight.TEXTURE = pygame._sdl2.Texture.from_surface(renderer, pygame.image.load(self.path + "spotlights/" + spotlights[self.spotlight_index]))
+            self.spotlight.TEXTURE.blend_mode = 4
 
     def render_overlay(self):
         self.overlay = pygame._sdl2.Texture.from_surface(renderer, self.pygame_overlay)
@@ -196,6 +193,7 @@ def main(settings, screen, renderer): # TODO: redesign fades.
                 sub_effects.ArcSprite(("moon_oil.png"), settings.center)]
 
     settings.spotlight = sub_effects.Spotlight(os.listdir(settings.path + "spotlights/")[0], settings.resolution)
+    settings.spotlight_index = 0
     displays, pos = create_displays(settings)
     text = Text()
     text.index = 0
