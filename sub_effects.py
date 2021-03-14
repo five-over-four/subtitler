@@ -10,9 +10,10 @@ renderer = None
 settings = None
 screen = None
 
+# movable and resizable image that can rotate.
 class Sprite:
 
-    def __init__(self, item, pos, fade_speed, spin_speed=0, control_speed=5):
+    def __init__(self, item, pos, fade_speed, spin_speed=0, control_speed=4):
         self.img_ref = pygame.image.load(effects + item) # reference image
         self.original_size = self.img_ref.get_size() # reference size for scaling.
         self.w, self.h = self.original_size
@@ -54,7 +55,7 @@ class Sprite:
 
     def toggle(self):
         self.fade_speed *= -1
-        self.opacity += self.fade_speed # certain values may overshoot 255
+        self.opacity += self.fade_speed
         print(f"{self.__class__.__name__} is {self.fade_speed > 0}")
 
 # animates a sprite on a circular path while spinning.
@@ -94,11 +95,11 @@ class SweepSprite(Sprite): # back and forth.
         self.phi = (self.phi + self.rate) % 360
         self.pos = self.sway_pos()
 
-# draw random-sized small circles at random positions.
+# draw n minsize-maxsize small circles at random positions.
+# toggle to redraw if resizing window.
 class Stars:
 
     def __init__(self, n, minsize=1, maxsize=4):
-        self.rect = (0,0)
         self.opacity = 0
         self.fade_speed = -3
         self.minsize = minsize
@@ -126,7 +127,7 @@ class Stars:
         elif self.opacity < 0:
             self.opacity = 0
         self.TEXTURE.alpha = self.opacity
-        return {"dstrect": self.rect}
+        return {"dstrect": (0,0)}
 
     def toggle(self):
         if self.opacity == 0 and self.surf.get_size() != screen.size:
@@ -141,41 +142,60 @@ class Spotlight:
     def __init__(self, light_texture, resolution):
         self.cover = pygame.Surface(resolution)
         self.light = pygame.image.load(os.path.dirname(os.path.realpath(__file__)) + "/spotlights/" + light_texture)
+        self.cover.set_colorkey((1,2,3)) # needed for alpha.
+        self.light.set_colorkey((1,2,3))
+        self.COVER_TEXTURE = pygame._sdl2.Texture.from_surface(renderer, self.cover)
+        self.TEXTURE = pygame._sdl2.Texture.from_surface(renderer, self.light)
+        self.TEXTURE.blend_mode = 4
         self.original_size = self.light.get_size() # we use this to control the 1/r scaling.
         self.w, self.h = self.light.get_size()
-        self.opacity = 255
-        self.fade_speed = 3
+        self.x, self.y = 0, 0
+        self.opacity = 0
+        self.fade_speed = -3
 
     def draw(self):
-        self.shine(self.light)
-        self.TEXTURE.draw(dstrect=(0,0))
+        if self.opacity == 0:
+            return
+        self.set_alpha()
+        self.make_rects()
+        for rect in self.surround_rects:
+            self.COVER_TEXTURE.draw(dstrect=rect)
+        if self.opacity >= 255:
+            self.TEXTURE.draw(dstrect=self.main_rect)
 
-    def shine(self, lightbeam): # new texture every frame - expensive.
+    def set_alpha(self):
         self.opacity += self.fade_speed
         if self.opacity > 255:
             self.opacity = 255
         elif self.opacity < 0:
             self.opacity = 0
-        self.cover.fill((self.opacity,)*3)
+        self.COVER_TEXTURE.alpha = self.opacity
+        self.TEXTURE.alpha = self.opacity
+
+    def make_rects(self): # draw spotlight and black AROUND it to circumvent poor additive blending.
         x, y = pygame.mouse.get_pos()
-        if self.opacity == 0:
-            self.cover.blit(pygame.transform.scale(self.light, (round(self.w), round(self.h))), (x - self.w // 2, y - self.h // 2))
-        self.TEXTURE = pygame._sdl2.Texture.from_surface(renderer, self.cover)
-        self.TEXTURE.blend_mode = 4
+        self.x = x - self.w//2
+        self.y = y - self.h//2
+        self.main_rect = pygame.Rect(self.x, self.y, self.w, self.h)
+        self.surround_rects = [pygame.Rect(0, 0, settings.resolution[0], self.y),
+                               pygame.Rect(0, self.h + self.y, settings.resolution[0], settings.resolution[0] - self.y - self.h),
+                               pygame.Rect(0, self.y, self.x, self.h),
+                               pygame.Rect(self.x + self.w, self.y, settings.resolution[0] - self.x - self.w, self.h)]
+        if self.opacity < 255: # blend_mode 4 forbids alpha, so we hide the image until the background is fully opaque.
+            self.surround_rects.append(pygame.Rect(self.x, self.y, self.w, self.h))
 
     def resize(self, order):
         if self.w >= 1 and self.h >= 1:
-            self.w = self.w + order * (self.w / self.original_size[0])
-            self.h = self.w + order * (self.h / self.original_size[1])
+            self.w = self.w + order * 3 * (self.w / self.original_size[0])
+            self.h = self.w + order * 3 * (self.h / self.original_size[1])
 
     def toggle(self):
-        if self.opacity == 0 and self.cover.get_size() != screen.size: # resize.
-            self.cover = pygame.Surface(settings.resolution)
         self.fade_speed *= -1
         self.opacity += self.fade_speed
-        print(f"Spot is {self.opacity > 0}")
+        print(f"Spot is {self.fade_speed > 0}")
 
 # 4 (or 8) directions. like in a video game.
+# order in directory: E, S, W, N, NE, SE, SW, NW.
 class SpriteSheet:
     def __init__(self, speed = 3):
         path = os.path.dirname(os.path.realpath(__file__)) + "/directional_sprites"
@@ -183,7 +203,7 @@ class SpriteSheet:
         self.images = [pygame.image.load(path + "/" + image) for image in images]
         self.pos = settings.center
         self.rect = self.images[0].get_rect(center=self.pos)
-        self.directions = [(1,0), (0,1), (-1,0), (0,-1)] # right, down, left, up.
+        self.directions = [(1,0), (0,1), (-1,0), (0,-1), (1,-1), (1,1), (-1,1), (-1,-1)]
         self.TEXTURES = {key: pygame._sdl2.Texture.from_surface(renderer, image) for key, image in zip(self.directions, self.images)}
         self.TEXTURE = self.TEXTURES[(1,0)] # start right.
         self.speed = speed
@@ -193,9 +213,13 @@ class SpriteSheet:
         return {"dstrect": self.rect}
 
     def move(self, diff):
-        if diff != [0,0] and abs(diff[0]) + abs(diff[1]) <= 1:
-            self.pos = self.pos[0] + diff[0]*self.speed, self.pos[1] + diff[1]*self.speed
-            self.TEXTURE = self.TEXTURES[tuple(diff)]
+        if diff != [0,0]:
+            if len(self.TEXTURES) == 4 and abs(diff[0]) + abs(diff[1]) <= 1:
+                self.pos = self.pos[0] + diff[0]*self.speed, self.pos[1] + diff[1]*self.speed
+                self.TEXTURE = self.TEXTURES[tuple(diff)]
+            elif len(self.TEXTURES) == 8:
+                self.pos = self.pos[0] + diff[0]*self.speed, self.pos[1] + diff[1]*self.speed
+                self.TEXTURE = self.TEXTURES[tuple(diff)]
             self.rect.center = self.pos
 
     def toggle(self):

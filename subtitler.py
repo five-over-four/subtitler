@@ -23,8 +23,6 @@ class Settings:
         self.overlay = None
         self.next_overlay(1) # 1 means 'forward', -1 'backward'.
         self.overlay_on = False
-        self.spotlight = None
-        self.next_spotlight(1)
 
     def get_center(self):
         return (self.resolution[0] // 2, self.resolution[1] // 2)
@@ -77,15 +75,16 @@ class DisplayFrame:
 class Text:
 
     def __init__(self):
+        self.colour = (255,255,255)
+        self.text_alpha = 0
+        self.box_alpha = 0
+        self.max_alpha = 225 # max alpha for the box under text.
         self.update_font_size()
         self.read_messages()
         self.index = 0 # current line number in directory.txt.
         self.next_message()
         self.texts = {} # Texture: Rect
         self.boxes = {} # Texture: Rect
-        self.text_alpha = 0
-        self.box_alpha = 0
-        self.max_alpha = 225 # max alpha for the box under text.
         self.speaker_height = 120
 
     def update_font_size(self): # linear function: font_size is 40 at width 1500, 60 at 2000.
@@ -99,7 +98,7 @@ class Text:
         self.font = pygame.font.SysFont("courier", self.font_size) # first reset font at desired size (default 40).
         x, y = settings.get_center()
         self.set_subtitle_size(max(self.message, key=lambda x: len(x))) # based on the longer segment.
-        text_surf = self.font.render(self.message[-1], True, (255,255,255))
+        text_surf = self.font.render(self.message[-1], True, self.colour)
         text_box = pygame.Surface((text_surf.get_width() + 20, text_surf.get_height() + 20))
         text_box.set_colorkey((1,2,3)) # Texture.alpha needs a colorkey to work properly.
         text_surfs = [text_surf]
@@ -188,7 +187,7 @@ def main(settings, screen, renderer): # TODO: redesign fades.
     sub_effects.screen = screen
 
     # EFFECTS SECTION - controls 1-9.
-    # make instances of classes in subeffects.py in effects.
+    # make instances of classes in subeffects.py in effects, excluding spotlight.
     effects = [ sub_effects.Stars(400, 1, 4),
                 sub_effects.ArcSprite("large_frozen_earth.png", origin=(screen.size[0]//2, 300), spin_speed=0, axes=(200,600), speed=5, start_angle=216),
                 sub_effects.Sprite("large_frozen_earth.png", (0,0), 10, 1),
@@ -196,6 +195,7 @@ def main(settings, screen, renderer): # TODO: redesign fades.
                 sub_effects.SpriteSheet(),
                 sub_effects.ArcSprite(("moon_oil.png"), settings.center)]
 
+    settings.spotlight = sub_effects.Spotlight(os.listdir(settings.path + "spotlights/")[0], settings.resolution)
     displays, pos = create_displays(settings)
     text = Text()
     text.index = 0
@@ -204,6 +204,8 @@ def main(settings, screen, renderer): # TODO: redesign fades.
     fade_duration = settings.fps // 5 # 1/x seconds.
     control_index = 0
     fullscreen_toggle = False # no 'screen.is_fullscreen' in SDL2, need this.
+
+    settings.spotlight = sub_effects.Spotlight("1_window.png", settings.resolution)
 
     while True:
 
@@ -221,7 +223,7 @@ def main(settings, screen, renderer): # TODO: redesign fades.
             if ef.opacity > 0:
                 ef.TEXTURE.draw(**ef.update())
 
-        if settings.spotlight.opacity < 255: # uses additive blending => inverted alpha values.
+        if settings.spotlight.opacity > 0: # uses additive blending => inverted alpha values.
             settings.spotlight.draw()
 
         if text.text_alpha > 0 and text.message:
@@ -238,7 +240,7 @@ def main(settings, screen, renderer): # TODO: redesign fades.
             if e.type == pygame.QUIT:
                 exit()
 
-            # spotlight controls
+            # spotlight controls with mouse
             elif e.type == pygame.MOUSEBUTTONDOWN:
                 if e.button == 1: # left click
                     settings.spotlight.toggle()
@@ -260,6 +262,9 @@ def main(settings, screen, renderer): # TODO: redesign fades.
                         text.next_message()
                     text_show ^= True
                     fade_time = 1 # access fades.
+
+                elif e.key == pygame.K_r: # toggle text colour red <-> white.
+                    text.colour = (255,0,0) if text.colour == (255,255,255) else (255,255,255)
 
                 elif e.key == pygame.K_a: # reload current text file. retain position.
                     text.read_messages()
@@ -364,7 +369,7 @@ def main(settings, screen, renderer): # TODO: redesign fades.
             ef = effects[control_index]
             if hasattr(ef, "move"):
                 ef.move(direction)
-            if settings.spotlight.opacity < 255: # takes precedent over sprites.
+            if settings.spotlight.opacity > 0: # takes precedent over sprites.
                 settings.spotlight.resize(resize_factor)
             elif hasattr(ef, "resize"):
                 ef.resize(resize_factor)
@@ -382,7 +387,8 @@ def delete_old_textfiles(directory, dirnames):
 
 # STARTUP CONFIGURATION - directory choice and resolution.
 # you want to put all the image directories into ./pics, 'tmp' ignored.
-def config():
+if __name__ == "__main__":
+
     possible_directories = []
     hub_path = os.path.dirname(os.path.realpath(__file__)) + "/pics/"
     dir_names = os.listdir(hub_path)
@@ -420,13 +426,6 @@ def config():
     delete_old_textfiles(hub_path, dir_names)
     print("Current resolution: %s x %s" %(settings.resolution))
     renderer = pygame._sdl2.Renderer(screen, vsync=True)
-
-    return settings, screen, renderer
-
-# we create settings, screen, renderer here so that they are globally accessible.
-if __name__ == "__main__":
  
     pygame.init()
-    # these are made global as singleton class instances needed everywhere.
-    settings, screen, renderer = config()
     main(settings, screen, renderer)
