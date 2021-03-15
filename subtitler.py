@@ -1,4 +1,5 @@
 import pygame._sdl2
+import pygame.locals
 import os
 from random import randint
 from itertools import product
@@ -186,11 +187,7 @@ def main(settings, screen, renderer): # TODO: redesign fades.
     # EFFECTS SECTION - controls 1-9.
     # make instances of classes in subeffects.py in effects, excluding spotlight.
     effects = [ sub_effects.Stars(400, 1, 4),
-                sub_effects.ArcSprite("large_frozen_earth.png", origin=(screen.size[0]//2, 300), spin_speed=0, axes=(200,600), speed=5, start_angle=216),
-                sub_effects.Sprite("large_frozen_earth.png", (0,0), 10, 1),
-                sub_effects.SweepSprite("town.png", (1000,540), 200, 1, 0),
-                sub_effects.SpriteSheet(),
-                sub_effects.ArcSprite(("moon_oil.png"), settings.center)]
+                sub_effects.Sprite("landscape.png", pos=(1000,500), initial_scale=1.5)]
 
     settings.spotlight = sub_effects.Spotlight(os.listdir(settings.path + "spotlights/")[0], settings.resolution)
     settings.spotlight_index = 0
@@ -202,8 +199,6 @@ def main(settings, screen, renderer): # TODO: redesign fades.
     fade_duration = settings.fps // 5 # 1/x seconds.
     control_index = 0
     fullscreen_toggle = False # no 'screen.is_fullscreen' in SDL2, need this.
-
-    settings.spotlight = sub_effects.Spotlight("1_window.png", settings.resolution)
 
     while True:
 

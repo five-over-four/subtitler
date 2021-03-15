@@ -13,15 +13,15 @@ screen = None
 # movable and resizable image that can rotate.
 class Sprite:
 
-    def __init__(self, item, pos, fade_speed, spin_speed=0, control_speed=4):
+    def __init__(self, item, pos, initial_scale=1, fade_speed=10, spin_speed=0, control_speed=4):
         self.img_ref = pygame.image.load(effects + item) # reference image
         self.original_size = self.img_ref.get_size() # reference size for scaling.
-        self.w, self.h = self.original_size
+        self.w, self.h = self.original_size[0]*initial_scale, self.original_size[1]*initial_scale
         self.TEXTURE = pygame._sdl2.Texture.from_surface(renderer, self.img_ref)
         self.spin_speed = spin_speed
         self.control_speed = control_speed
         self.pos = pos
-        self.rect = self.img_ref.get_rect(center=self.pos)
+        self.rect = pygame.Rect(*self.pos, self.w, self.h)
         self.theta = 0
         self.opacity = 0
         self.fade_speed = -fade_speed # flips when calling toggle()
