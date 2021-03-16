@@ -188,7 +188,7 @@ def main(settings, screen, renderer): # TODO: redesign fades.
     # make instances of classes in subeffects.py in effects, excluding spotlight.
     effects = [ sub_effects.Stars(400, 1, 4),
                 sub_effects.Sprite("cuberibbon.png", pos=(0,0)),
-                sub_effects.Animation("arrowtest", 50, settings.center)]
+                sub_effects.Animation("cube", 14, settings.center)]
 
     # SCENES - press PGDN, PGUP to cycle through. basically, use Sprite.
     scenes = []
@@ -269,12 +269,15 @@ def main(settings, screen, renderer): # TODO: redesign fades.
                     text.colour = (255,0,0) if text.colour == (255,255,255) else (255,255,255)
                 
                 elif e.key in (pygame.K_RIGHT, pygame.K_LEFT): # for setting larger scenes with fades.
+                    if not scenes:
+                        print("There are no scenes set up.")
+                        break
                     scenes[scene_index].toggle()
                     if e.key == pygame.K_RIGHT:
                         scene_index = (scene_index + 1) % len(scenes)
                     else:
                         scene_index = (scene_index - 1) % len(scenes)
-                    scenes[scene_index].toggle()
+                        scenes[scene_index].toggle()
 
                 elif e.key == pygame.K_a: # reload current text file. retain position.
                     text.read_messages()
