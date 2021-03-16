@@ -13,7 +13,7 @@ screen = None
 # movable and resizable image that can rotate.
 class Sprite:
 
-    def __init__(self, item, pos, initial_scale=1, fade_speed=10, spin_speed=0, control_speed=4):
+    def __init__(self, item, pos=(0,0), initial_scale=1, fade_speed=10, spin_speed=0, control_speed=4):
         self.img_ref = pygame.image.load(effects + item) # reference image
         self.original_size = self.img_ref.get_size() # reference size for scaling.
         self.w, self.h = self.original_size[0]*initial_scale, self.original_size[1]*initial_scale
@@ -61,7 +61,7 @@ class Sprite:
 # animates a sprite on a circular path while spinning.
 class ArcSprite(Sprite):
 
-    def __init__(self, item, origin, axes=(300,300), speed=0.5, start_angle=0, spin_speed=0):
+    def __init__(self, item, origin=(0,0), axes=(300,300), speed=0.5, start_angle=0, spin_speed=0):
         super().__init__(item, origin, 10, spin_speed)
         self.origin = origin
         self.axes = axes
@@ -79,7 +79,7 @@ class ArcSprite(Sprite):
         self.rect.center = self.pos
 
 class SweepSprite(Sprite): # back and forth.
-    def __init__(self, item, origin, rate=0.5, width=300, spin_speed=0):
+    def __init__(self, item, origin=(0,0), rate=0.5, width=300, spin_speed=0):
         super().__init__(item, origin, 10, spin_speed)
         self.origin = origin
         self.width = width
@@ -99,7 +99,7 @@ class SweepSprite(Sprite): # back and forth.
 # toggle to redraw if resizing window.
 class Stars:
 
-    def __init__(self, n, minsize=1, maxsize=4):
+    def __init__(self, n=400, minsize=1, maxsize=4):
         self.opacity = 0
         self.fade_speed = -3
         self.minsize = minsize
@@ -139,7 +139,7 @@ class Stars:
         print(f"Stars is {self.fade_speed > 0}")
 
 class Spotlight:
-    def __init__(self, light_texture, resolution):
+    def __init__(self, light_texture, resolution=(1920,1080)):
         self.cover = pygame.Surface(resolution)
         self.light = pygame.image.load(os.path.dirname(os.path.realpath(__file__)) + "/spotlights/" + light_texture)
         self.cover.set_colorkey((1,2,3)) # needed for alpha.
@@ -225,8 +225,10 @@ class SpriteSheet:
         self.opacity = 1 if self.opacity == 0 else 0
         print(f"SpriteSheet is {self.opacity > 0}")
 
+# like Sprite, but takes a directory in ./animations and draws them one by one,
+# switching image each frametime frames. coding-wise, a mix of Sprite and SpriteSheet.
 class Animation:
-    def __init__(self, dirname, frametime, pos, control_speed=3):
+    def __init__(self, dirname, frametime=10, pos=(0,0), control_speed=3):
         path = os.path.dirname(os.path.realpath(__file__)) + "/animations/" + dirname
         images = [pygame.image.load(path + "/" + image) for image in os.listdir(path)]
         self.original_size = images[0].get_size()

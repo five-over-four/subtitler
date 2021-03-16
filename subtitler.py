@@ -187,11 +187,14 @@ def main(settings, screen, renderer): # TODO: redesign fades.
     # EFFECTS SECTION - controls 1-9.
     # make instances of classes in subeffects.py in effects, excluding spotlight.
     effects = [ sub_effects.Stars(400, 1, 4),
-                sub_effects.Sprite("landscape.png", pos=(1000,500), initial_scale=1.5),
-                sub_effects.Sprite("ruins.png", pos=(0,0)),
                 sub_effects.Sprite("cuberibbon.png", pos=(0,0)),
                 sub_effects.Animation("arrowtest", 50, settings.center)]
 
+    # SCENES - press PGDN, PGUP to cycle through. basically, use Sprite.
+    scenes = []
+    scene_index = 0
+
+    # rest of the generic settings
     settings.spotlight = sub_effects.Spotlight(os.listdir(settings.path + "spotlights/")[0], settings.resolution)
     settings.spotlight_index = 0
     displays, pos = create_displays(settings)
@@ -209,17 +212,20 @@ def main(settings, screen, renderer): # TODO: redesign fades.
         renderer.clear()
 
         # DRAWING SECTION
-        for i, display in enumerate(displays): # must be bottom, 100% opaque.
+        for i, display in enumerate(displays): # flickering panels. bottom because 100% opaque.
             display.give_textures().draw(dstrect=pos[i])
 
-        if settings.overlay_on: # overlay.
+        if settings.overlay_on: # draw overlay with transparency. needs alpha layer or will cover panels.
             settings.overlay.draw(dstrect=(0,0))
+
+        if scenes and scenes[scene_index].opacity > 0: # effect *cycling* with fades in between.
+            scenes[scene_index].TEXTURE.draw(**scenes[scene_index].update())
 
         for ef in effects:
             if ef.opacity > 0:
                 ef.TEXTURE.draw(**ef.update())
 
-        if settings.spotlight.opacity > 0: # uses additive blending => inverted alpha values.
+        if settings.spotlight.opacity > 0:
             settings.spotlight.draw()
 
         if text.text_alpha > 0 and text.message:
@@ -261,6 +267,14 @@ def main(settings, screen, renderer): # TODO: redesign fades.
 
                 elif e.key == pygame.K_r: # toggle text colour red <-> white.
                     text.colour = (255,0,0) if text.colour == (255,255,255) else (255,255,255)
+                
+                elif e.key in (pygame.K_PAGEDOWN, pygame.K_PAGEUP): # for setting larger scenes with fades.
+                    scenes[scene_index].toggle()
+                    if e.key == pygame.K_PAGEDOWN:
+                        scene_index = (scene_index + 1) % len(scenes)
+                    else:
+                        scene_index = (scene_index - 1) % len(scenes)
+                    scenes[scene_index].toggle()
 
                 elif e.key == pygame.K_a: # reload current text file. retain position.
                     text.read_messages()
