@@ -187,7 +187,10 @@ def main(settings, screen, renderer): # TODO: redesign fades.
     # EFFECTS SECTION - controls 1-9.
     # make instances of classes in subeffects.py in effects, excluding spotlight.
     effects = [ sub_effects.Stars(400, 1, 4),
-                sub_effects.Sprite("landscape.png", pos=(1000,500), initial_scale=1.5)]
+                sub_effects.Sprite("landscape.png", pos=(1000,500), initial_scale=1.5),
+                sub_effects.Sprite("ruins.png", pos=(0,0)),
+                sub_effects.Sprite("cuberibbon.png", pos=(0,0)),
+                sub_effects.Animation("arrowtest", 50, settings.center)]
 
     settings.spotlight = sub_effects.Spotlight(os.listdir(settings.path + "spotlights/")[0], settings.resolution)
     settings.spotlight_index = 0

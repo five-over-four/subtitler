@@ -224,3 +224,41 @@ class SpriteSheet:
     def toggle(self):
         self.opacity = 1 if self.opacity == 0 else 0
         print(f"SpriteSheet is {self.opacity > 0}")
+
+class Animation:
+    def __init__(self, dirname, frametime, pos, control_speed=3):
+        path = os.path.dirname(os.path.realpath(__file__)) + "/animations/" + dirname
+        images = [pygame.image.load(path + "/" + image) for image in os.listdir(path)]
+        self.original_size = images[0].get_size()
+        self.w, self.h = self.original_size
+        self.TEXTURES = [pygame._sdl2.Texture.from_surface(renderer, image) for image in images]
+        self.TEXTURE = self.TEXTURES[0]
+        self.pos = pos
+        self.rect = images[0].get_rect(center=self.pos)
+        self.control_speed = control_speed
+        self.frametime = frametime # per image.
+        self.timer = 0 # takes care of flipping through the images.
+        self.opacity = 0
+
+    def update(self):
+        if self.opacity == 0:
+            return
+        self.timer = (self.timer + 1) % (self.frametime * len(self.TEXTURES))
+        self.TEXTURE = self.TEXTURES[self.timer // self.frametime]
+        return {"dstrect": self.rect}
+        
+    def move(self, diff):
+        self.pos = self.pos[0] + diff[0]*self.control_speed, self.pos[1] + diff[1]*self.control_speed
+        self.rect.center = self.pos
+
+    def resize(self, order):
+        if order == 0 or (order < 0 and self.w <= 1): # don't resize too small.
+            return
+        self.w = self.w + order * 3 * self.w / self.original_size[0] * self.w/self.h # aspect ratio.
+        self.h = self.h + order * 3 * self.h / self.original_size[1]
+        self.rect = pygame.Rect(*self.pos, self.w, self.h)
+        self.rect.center = self.pos
+
+    def toggle(self):
+        self.opacity = 1 if self.opacity == 0 else 0
+        print(f"Animation is {self.opacity > 0}")
