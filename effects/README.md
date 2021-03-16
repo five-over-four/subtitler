@@ -14,9 +14,10 @@ Produces n white circles on the screen, sized between minsize and maxsize in rad
 ## Spotlight
 As shown in the image below. Follows the cursor. Toggle with mouse buttons and resize with +/-.
 
+## Animation
+Takes a directory in ./animations and cycles through the images in an orderly fashion with a frame timer. Essentially, produces an animated Sprite instance.
+
 ![Spotlight](https://i.imgur.com/fZnm9nj.png)
 
 # Usage
-Place any effects as instances of these classes into the 'effects' list in the main function.
-
-This feature is somewhat experimental, and requires some programming to make use of. This is, after all a personal project. Usability comes second.
+Place any effects as instances of these classes into the 'effects' list in the main function. Alternatively, into the 'scenes' list. The files for these effects are held in ./effects, ./spotlights, and ./animations.

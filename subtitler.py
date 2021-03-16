@@ -268,9 +268,9 @@ def main(settings, screen, renderer): # TODO: redesign fades.
                 elif e.key == pygame.K_r: # toggle text colour red <-> white.
                     text.colour = (255,0,0) if text.colour == (255,255,255) else (255,255,255)
                 
-                elif e.key in (pygame.K_PAGEDOWN, pygame.K_PAGEUP): # for setting larger scenes with fades.
+                elif e.key in (pygame.K_RIGHT, pygame.K_LEFT): # for setting larger scenes with fades.
                     scenes[scene_index].toggle()
-                    if e.key == pygame.K_PAGEDOWN:
+                    if e.key == pygame.K_RIGHT:
                         scene_index = (scene_index + 1) % len(scenes)
                     else:
                         scene_index = (scene_index - 1) % len(scenes)
@@ -289,11 +289,11 @@ def main(settings, screen, renderer): # TODO: redesign fades.
                     displays, pos = create_displays(settings)
                     text_show = False
 
-                elif e.key == pygame.K_LEFT:
+                elif e.key == pygame.K_DOWN: # overlay switching.
                     settings.next_overlay(-1)
                     settings.render_overlay()
 
-                elif e.key == pygame.K_RIGHT:
+                elif e.key == pygame.K_UP:
                     settings.next_overlay(1)
                     settings.render_overlay()
 
