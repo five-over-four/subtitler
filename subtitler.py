@@ -109,7 +109,7 @@ class Text:
             speaker_box.set_colorkey((1,2,3))
             text_surfs.append(speaker_surf)
             box_surfs.append(speaker_box)
-            self.speaker_height = box_surfs[1].get_height()*1.3 # rough placement.
+            self.speaker_height = box_surfs[1].get_height()*1.3 # rough placement, 1.3 is arbitrary.
             text_rects.append(speaker_surf.get_rect(center=(x,y-self.speaker_height)))
             box_rects.append(speaker_box.get_rect(center=(x,y-self.speaker_height)))
         self.texts = {pygame._sdl2.Texture.from_surface(renderer, text_surf): text_rect for text_surf, text_rect in zip(text_surfs, text_rects)}
@@ -185,18 +185,21 @@ def main(settings, screen, renderer): # TODO: redesign fades.
     sub_effects.screen = screen
 
     # EFFECTS SECTION - controls 1-9.
-    # make instances of classes in subeffects.py in effects, excluding spotlight.
-    effects = [ sub_effects.Stars(400, 1, 4),
+    # make instances of classes in subeffects.py in effects.
+    effects = [ sub_effects.Stars(400,1,4),
                 sub_effects.Sprite("cuberibbon.png", pos=(0,0)),
-                sub_effects.Animation("cube", 14, settings.center)]
+                sub_effects.Animation("cube", 14, settings.center),
+                sub_effects.Animation("blob", 10, settings.center)]
 
-    # SCENES - press PGDN, PGUP to cycle through. basically, use Sprite.
-    scenes = []
+    settings.spotlight = sub_effects.Spotlight(os.listdir(settings.path + "spotlights/")[0], settings.resolution)
+    settings.spotlight_index = 0
+
+    # SCENES - press PGDN, PGUP to cycle through. basically, use Sprite or Animation.
+    # pos=(0,0), initial_scale=2, make 960 x 540 image.
+    scenes = [sub_effects.Sprite(str(i) + ".png", initial_scale=2, fade_speed=2) for i in range(1,12)]
     scene_index = 0
 
     # rest of the generic settings
-    settings.spotlight = sub_effects.Spotlight(os.listdir(settings.path + "spotlights/")[0], settings.resolution)
-    settings.spotlight_index = 0
     displays, pos = create_displays(settings)
     text = Text()
     text.index = 0
@@ -218,12 +221,13 @@ def main(settings, screen, renderer): # TODO: redesign fades.
         if settings.overlay_on: # draw overlay with transparency. needs alpha layer or will cover panels.
             settings.overlay.draw(dstrect=(0,0))
 
-        if scenes and scenes[scene_index].opacity > 0: # effect *cycling* with fades in between.
-            scenes[scene_index].TEXTURE.draw(**scenes[scene_index].update())
-
         for ef in effects:
             if ef.opacity > 0:
                 ef.TEXTURE.draw(**ef.update())
+
+        for scene in scenes:
+            if scene.opacity > 0:
+                scene.TEXTURE.draw(**scene.update())
 
         if settings.spotlight.opacity > 0:
             settings.spotlight.draw()
@@ -239,19 +243,16 @@ def main(settings, screen, renderer): # TODO: redesign fades.
         # EVENT HANDLING SECTION
         for e in pygame.event.get():
 
-            if e.type == pygame.QUIT:
-                exit()
+            # # spotlight controls with mouse
+            # if e.type == pygame.MOUSEBUTTONDOWN:
+            #     if e.button == 1: # left click
+            #         settings.spotlight.toggle()
+            #     elif e.button == 4: # scroll up (i think?)
+            #         settings.next_spotlight(1)
+            #     elif e.button == 5: # scroll down
+            #         settings.next_spotlight(-1)
 
-            # spotlight controls with mouse
-            elif e.type == pygame.MOUSEBUTTONDOWN:
-                if e.button == 1: # left click
-                    settings.spotlight.toggle()
-                elif e.button == 4: # scroll up (i think?)
-                    settings.next_spotlight(1)
-                elif e.button == 5: # scroll down
-                    settings.next_spotlight(-1)
-
-            elif e.type == pygame.KEYDOWN:
+            if e.type == pygame.KEYDOWN:
 
                 if e.key == pygame.K_ESCAPE:
                     exit()
@@ -264,33 +265,31 @@ def main(settings, screen, renderer): # TODO: redesign fades.
                         text.next_message()
                     text_show ^= True
                     fade_time = 1 # access fades.
-
-                elif e.key == pygame.K_r: # toggle text colour red <-> white.
-                    text.colour = (255,0,0) if text.colour == (255,255,255) else (255,255,255)
                 
                 elif e.key in (pygame.K_RIGHT, pygame.K_LEFT): # for setting larger scenes with fades.
                     if not scenes:
                         print("There are no scenes set up.")
                         break
-                    scenes[scene_index].toggle()
+                    if scenes[scene_index].opacity > 0:
+                        scenes[scene_index].toggle()
                     if e.key == pygame.K_RIGHT:
                         scene_index = (scene_index + 1) % len(scenes)
                     else:
                         scene_index = (scene_index - 1) % len(scenes)
-                        scenes[scene_index].toggle()
+                    scenes[scene_index].toggle()
 
                 elif e.key == pygame.K_a: # reload current text file. retain position.
                     text.read_messages()
-
-                elif e.key == pygame.K_b: # enable overlay
-                    settings.overlay_on ^= True
-                    if not settings.overlay:
-                        settings.render_overlay()
 
                 elif e.key == pygame.K_d: # switch directory.
                     load_next_directory(text, settings)
                     displays, pos = create_displays(settings)
                     text_show = False
+
+                elif e.key == pygame.K_b: # enable overlay
+                    settings.overlay_on ^= True
+                    if not settings.overlay:
+                        settings.render_overlay()
 
                 elif e.key == pygame.K_DOWN: # overlay switching.
                     settings.next_overlay(-1)
@@ -347,6 +346,9 @@ def main(settings, screen, renderer): # TODO: redesign fades.
                 buffer = pygame._sdl2.Texture(renderer, settings.resolution, target=True)
                 text.update_font_size()
                 print("Current resolution: %s x %s" %(settings.resolution))
+
+            elif e.type == pygame.QUIT:
+                exit()
 
         # FADES FOR TEXT AND BOXES. (TODO: build into classes.)
         if fade_time > 0 and text_show: # fade in
@@ -419,7 +421,6 @@ if __name__ == "__main__":
             dir_choice = input("Directory\n> ") # name or number
             res_choice = input("Resolution\n> ") # width, always 16:9
             resolution = (int(res_choice)*16//9, int(res_choice))
-            screen = pygame._sdl2.Window("...", size=resolution, resizable=True)
             if dir_choice.isnumeric():
                 settings = Settings(possible_directories[int(dir_choice)-1], resolution)
                 settings.current_index = int(dir_choice) - 1
@@ -435,6 +436,8 @@ if __name__ == "__main__":
 
         except Exception as e:
             print(f"Incorrect input: {e}.")
+
+    screen = pygame._sdl2.Window("...", size=resolution, resizable=True)
 
     delete_old_textfiles(hub_path, dir_names)
     print("Current resolution: %s x %s" %(settings.resolution))

@@ -28,7 +28,7 @@ class Sprite:
 
     def update(self):
         self.automate_movement() # inherited class defines this.
-        self.opacity += self.fade_speed 
+        self.opacity += self.fade_speed
         if self.opacity > 255:
             self.opacity = 255
         elif self.opacity < 0:
