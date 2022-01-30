@@ -188,15 +188,19 @@ def main(settings, screen, renderer): # TODO: redesign fades.
     # make instances of classes in subeffects.py in effects.
     effects = [ sub_effects.Stars(400,1,4),
                 sub_effects.Sprite("cuberibbon.png", pos=(0,0)),
-                sub_effects.Animation("cube", 14, settings.center),
-                sub_effects.Animation("blob", 10, settings.center)]
+                sub_effects.Animation("cube", 14, settings.center)]
 
     settings.spotlight = sub_effects.Spotlight(os.listdir(settings.path + "spotlights/")[0], settings.resolution)
     settings.spotlight_index = 0
 
     # SCENES - press PGDN, PGUP to cycle through. basically, use Sprite or Animation.
-    # pos=(0,0), initial_scale=2, make 960 x 540 image.
-    scenes = [sub_effects.Sprite(str(i) + ".png", initial_scale=2, fade_speed=2) for i in range(1,12)]
+    # pos=(0,0), initial_scale=2; make 960 x 540 image.
+    scene_files = os.listdir(os.path.dirname(os.path.realpath(__file__)) + "/effects/")
+    largest_num = 0
+    for filename in scene_files:
+        if filename[:-4].isnumeric():
+            largest_num = max(largest_num, int(filename[:-4]))
+    scenes = [sub_effects.Sprite(str(i) + ".png", initial_scale=2, fade_speed=2) for i in range(1,largest_num+1)]
     scene_index = 0
 
     # rest of the generic settings
@@ -280,6 +284,7 @@ def main(settings, screen, renderer): # TODO: redesign fades.
 
                 elif e.key == pygame.K_a: # reload current text file. retain position.
                     text.read_messages()
+                    print("Reloaded dialogue file.")
 
                 elif e.key == pygame.K_d: # switch directory.
                     load_next_directory(text, settings)
@@ -421,6 +426,7 @@ if __name__ == "__main__":
             dir_choice = input("Directory\n> ") # name or number
             res_choice = input("Resolution\n> ") # width, always 16:9
             resolution = (int(res_choice)*16//9, int(res_choice))
+
             if dir_choice.isnumeric():
                 settings = Settings(possible_directories[int(dir_choice)-1], resolution)
                 settings.current_index = int(dir_choice) - 1
