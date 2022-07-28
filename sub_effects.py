@@ -246,13 +246,16 @@ class Animation:
         path = os.path.dirname(os.path.realpath(__file__)) + "/animations/" + dirname
         images = [pygame.image.load(path + "/" + image) for image in os.listdir(path)]
         self.theta = 0
+        self.scale = scale
         self.original_size = images[0].get_size()
         self.original_pos = pos # for reset()
-        self.w, self.h = scale*self.original_size[0], self.original_size[1]
+        self.w, self.h = self.scale*self.original_size[0], self.scale*self.original_size[1]
         self.TEXTURES = [pygame._sdl2.Texture.from_surface(renderer, image) for image in images]
         self.TEXTURE = self.TEXTURES[0]
         self.pos = pos
-        self.rect = images[0].get_rect(center=self.pos)
+        # self.rect = images[0].get_rect(center=self.pos)
+        self.rect = pygame.Rect(*self.pos, self.w, self.h)
+        self.rect.center = self.pos
         self.control_speed = control_speed
         self.frametime = frametime # per image.
         self.timer = 0 # takes care of flipping through the images.
@@ -286,7 +289,7 @@ class Animation:
         self.rect.center = self.pos
 
     def reset(self):
-        self.w, self.h = self.original_size[0], self.original_size[1]
+        self.w, self.h = self.scale*self.original_size[0], self.scale*self.original_size[1]
         self.pos = self.original_pos
 
     def toggle(self):

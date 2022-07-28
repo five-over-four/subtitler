@@ -224,12 +224,13 @@ def main(settings, screen, renderer): # TODO: redesign fades.
                 sub_effects.Animation("dice", frametime=15),
                 sub_effects.Sprite("gif_test.gif"),
                 [sub_effects.Animation("frontfist", frametime=30, pos=(600, 440), scale=1),
-sub_effects.Animation("frontfist", frametime=30, pos=(300, 540), scale=1),
+sub_effects.Animation("frontfist", frametime=30, pos=(300, 540), scale=1.5),
 sub_effects.Animation("frontfist", frametime=27, pos=(800, 400), scale=0.7),
 sub_effects.Animation("frontfist", frametime=24, pos=(350, 400), scale=0.7),
 sub_effects.Animation("frontfist", frametime=21, pos=(750, 250), scale=0.4),
 sub_effects.Animation("frontfist", frametime=18, pos=(500, 250), scale=0.4)
-]
+][::-1],
+                sub_effects.Animation("frontfist", frametime=30, scale=2)
                 ]
 
     # Call mover classes from movers.py here and invoke them on specific entries of effects[].
@@ -270,7 +271,6 @@ sub_effects.Animation("frontfist", frametime=18, pos=(500, 250), scale=0.4)
             mover.move()
 
         # DRAWING SECTION
-
         # Flickering bottom layer images from a directory in /pics. Must be placed first because 100% opaque.
         for i, display in enumerate(displays):
             display.give_textures().draw(dstrect=pos[i])
