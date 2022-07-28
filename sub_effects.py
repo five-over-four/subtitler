@@ -16,6 +16,7 @@ class Sprite:
     def __init__(self, item, pos=(0,0), initial_scale=1, fade_speed=10, spin_speed=0, control_speed=4):
         self.img_ref = pygame.image.load(effects + item) # reference image
         self.original_size = self.img_ref.get_size() # reference size for scaling.
+        self.original_pos = pos
         self.w, self.h = self.original_size[0]*initial_scale, self.original_size[1]*initial_scale
         self.TEXTURE = pygame._sdl2.Texture.from_surface(renderer, self.img_ref)
         self.spin_speed = spin_speed
@@ -52,6 +53,10 @@ class Sprite:
 
     def automate_movement(self): # for inheritance.
         pass
+
+    def reset(self): # set all parameters to starting ones.
+        self.pos = self.original_pos
+        self.w, self.h = self.original_size[0], self.original_size[1]
 
     def toggle(self):
         self.fade_speed *= -1
@@ -129,6 +134,9 @@ class Stars:
         self.TEXTURE.alpha = self.opacity
         return {"dstrect": (0,0)}
 
+    def reset(self):
+        pass
+
     def toggle(self):
         if self.opacity == 0 and self.surf.get_size() != screen.size:
             self.dimensions = screen.size
@@ -188,6 +196,9 @@ class Spotlight:
             self.w = self.w + order * 3 * (self.w / self.original_size[0])
             self.h = self.w + order * 3 * (self.h / self.original_size[1])
 
+    def reset(self):
+        pass
+
     def toggle(self):
         self.fade_speed *= -1
         self.opacity += self.fade_speed
@@ -221,6 +232,9 @@ class SpriteSheet:
                 self.TEXTURE = self.TEXTURES[tuple(diff)]
             self.rect.center = self.pos
 
+    def reset(self): # consistency. now we can loop through all effects and reset().
+        pass
+
     def toggle(self):
         self.opacity = 1 if self.opacity == 0 else 0
         print(f"SpriteSheet is {self.opacity > 0}")
@@ -228,11 +242,13 @@ class SpriteSheet:
 # like Sprite, but takes a directory in ./animations and draws them one by one,
 # switching image each frametime frames. coding-wise, a mix of Sprite and SpriteSheet.
 class Animation:
-    def __init__(self, dirname, frametime=10, pos=(0,0), control_speed=3):
+    def __init__(self, dirname, frametime=10, pos=(0,0), control_speed=3, scale=1, fade_speed=5):
         path = os.path.dirname(os.path.realpath(__file__)) + "/animations/" + dirname
         images = [pygame.image.load(path + "/" + image) for image in os.listdir(path)]
+        self.theta = 0
         self.original_size = images[0].get_size()
-        self.w, self.h = self.original_size
+        self.original_pos = pos # for reset()
+        self.w, self.h = scale*self.original_size[0], self.original_size[1]
         self.TEXTURES = [pygame._sdl2.Texture.from_surface(renderer, image) for image in images]
         self.TEXTURE = self.TEXTURES[0]
         self.pos = pos
@@ -241,13 +257,21 @@ class Animation:
         self.frametime = frametime # per image.
         self.timer = 0 # takes care of flipping through the images.
         self.opacity = 0
+        self.fade_speed = -fade_speed
 
     def update(self):
         if self.opacity == 0:
             return
+        self.opacity += self.fade_speed
+        if self.opacity > 255:
+            self.opacity = 255
+        elif self.opacity < 0:
+            self.opacity = 0
+        self.TEXTURE.alpha = self.opacity
         self.timer = (self.timer + 1) % (self.frametime * len(self.TEXTURES))
         self.TEXTURE = self.TEXTURES[self.timer // self.frametime]
-        return {"dstrect": self.rect}
+        self.rect.center = self.pos # if pos is manipulated outside the class, the object will move without invoking move()
+        return {"dstrect": self.rect, "angle": self.theta}
         
     def move(self, diff):
         self.pos = self.pos[0] + diff[0]*self.control_speed, self.pos[1] + diff[1]*self.control_speed
@@ -261,6 +285,15 @@ class Animation:
         self.rect = pygame.Rect(*self.pos, self.w, self.h)
         self.rect.center = self.pos
 
+    def reset(self):
+        self.w, self.h = self.original_size[0], self.original_size[1]
+        self.pos = self.original_pos
+
     def toggle(self):
+        self.fade_speed *= -1
+        self.opacity += self.fade_speed
+        print(f"{self.__class__.__name__} is {self.fade_speed > 0}")
+
+    def deprecated_toggle(self):
         self.opacity = 1 if self.opacity == 0 else 0
         print(f"Animation is {self.opacity > 0}")

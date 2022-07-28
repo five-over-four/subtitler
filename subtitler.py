@@ -3,10 +3,16 @@ import pygame.locals
 import os
 from random import randint
 from itertools import product
-from math import ceil
+import math
 import sub_effects
 
 class Settings:
+
+    '''
+    This class contains all the information about the directories, screen properties, pygame
+    runtime stuff. Certain effects such as the backgrounds and spotlights are kept saved here.
+    Globally accessible, placed as settings = Settings() in the __main__ method.
+    '''
 
     def __init__(self, folder, defaultres):
         self.resolution = defaultres
@@ -16,8 +22,8 @@ class Settings:
         self.images = os.listdir(self.img_path) # list of filenames.
         self.speed = 15
         self.img_width, self.img_height = pygame.image.load(self.img_path + self.images[0]).get_size()
-        self.x = ceil(self.resolution[0] / self.img_width) # number of tiles.
-        self.y = ceil(self.resolution[1] / self.img_height)
+        self.x = math.ceil(self.resolution[0] / self.img_width) # number of tiles.
+        self.y = math.ceil(self.resolution[1] / self.img_height)
         self.center = self.get_center()
         self.fps = 144 # set to whatever. most settings are independent of it.
         self.rng_factor = (self.fps * self.speed) // 10 # how often images switch randomly.
@@ -53,6 +59,12 @@ class Settings:
 
 class DisplayFrame:
 
+    '''
+    Makes up the flickering image matrix that constitutes the lowest background layer of the
+    program. give_textures() determines how quickly the images change into others in the same
+    directory.
+    '''
+
     TEXTURES = []
 
     def __init__(self):
@@ -71,6 +83,12 @@ class DisplayFrame:
         DisplayFrame.TEXTURES = [pygame._sdl2.Texture.from_surface(renderer, image) for image in pygame_images]
 
 class Text:
+
+    '''
+    A single Text instance is needed to display the subtitles. Fade animations and scaling are
+    done by update_font_size and some if blocks in the main function. load_surfaces should be
+    rewritten later.
+    '''
 
     def __init__(self):
         self.colour = (255,255,255)
@@ -155,8 +173,8 @@ def load_next_directory(text, settings):
             settings.images = os.listdir(settings.path + "pics/" + settings.image_set)
             settings.img_path = settings.path + "pics/" + settings.image_set
             settings.img_width, settings.img_height = pygame.image.load(settings.img_path + "/" + settings.images[0]).get_size()
-            settings.x = ceil(screen.size[0] / settings.img_width) 
-            settings.y = ceil(screen.size[1] / settings.img_height)
+            settings.x = math.ceil(screen.size[0] / settings.img_width) 
+            settings.y = math.ceil(screen.size[1] / settings.img_height)
             break
         except:
             continue
@@ -172,6 +190,33 @@ def create_displays(settings): # tiling via x-tile * y-tile DisplayFrame objects
     pos = [(0 + off[0] * settings.img_width, 0 + off[1] * settings.img_height) for off in offset]
     return displays, pos
 
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# CUSTOM MOVER CLASSES HERE. CREATE AN INSTANCE WITHIN MAIN AND CALL THEM INSIDE THE WHILE LOOP.  #
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+class Mover1: # sinusoidal vertical bob and weave.
+    def __init__(self, anim):
+        self.anim = anim
+        self.ref_pos = anim.pos # need a starting position.
+        self.angle = 0
+        self.speed = 0.001 # how many radians per frame
+        self.scale = 200 # amount moved at max
+
+    def move(self):
+        self.angle += self.speed
+        self.anim.pos = (self.ref_pos[0] + math.sin(math.pi*self.angle)*self.scale, self.ref_pos[1])
+        self.anim.theta = round(5*math.sin(20*self.angle))
+
+# sub_effects effects are stored in a list called 'effects' in main(): each cell is toggled via 1-9.
+# This function enables a cell to be a list of effects rather than a single effect, such as 
+# 100 sprites at once. This is why there are if type(effect) == list checks inside main().
+def toggle_effects(effects):
+    if type(effects) != list:
+        effects.toggle()
+    else:
+        for ef in effects:
+            ef.toggle()
+
 def main(settings, screen, renderer): # TODO: redesign fades.
 
     # pygame components, including SDL2 rendering.
@@ -185,22 +230,40 @@ def main(settings, screen, renderer): # TODO: redesign fades.
     sub_effects.screen = screen
 
     # EFFECTS SECTION - controls 1-9.
-    # make instances of classes in subeffects.py in effects.
+    # Each entry can be either a sub_effects class instance or a *list* of such instances. You can toggle each
+    # instance or list of instances with keys 1-9.
     effects = [ sub_effects.Stars(400,1,4),
-                sub_effects.Sprite("cuberibbon.png", pos=(0,0)),
-                sub_effects.Animation("cube", 14, settings.center)]
+                sub_effects.Sprite("hand_hold_bits_gs.png", initial_scale=1.5, pos=(0,0)),
+                sub_effects.Sprite("hand_point_bits_gs.png", initial_scale=1.5, pos=(0,0)),
+                sub_effects.Animation("fist", frametime=30),
+                sub_effects.Animation("frontfist", frametime=30, pos=(600, 440)),
+                sub_effects.Animation("dice", frametime=15),
+                sub_effects.Sprite("gif_test.gif"),
+                [sub_effects.Animation("frontfist", frametime=30, pos=(600, 440), scale=1),
+sub_effects.Animation("frontfist", frametime=30, pos=(800, 440), scale=1),
+sub_effects.Animation("frontfist", frametime=30, pos=(600, 300), scale=0.7),
+sub_effects.Animation("frontfist", frametime=30, pos=(700, 300), scale=0.7),
+sub_effects.Animation("frontfist", frametime=30, pos=(950, 150), scale=0.4),
+sub_effects.Animation("frontfist", frametime=30, pos=(600, 150), scale=0.4)
+]
+                ]
+
+    # Custom mover class instances in this list. They can be used to move animations etc. around with specific
+    # paths that would be difficult to code in otherwise.
+    movers = [Mover1(effects[4])]
 
     settings.spotlight = sub_effects.Spotlight(os.listdir(settings.path + "spotlights/")[0], settings.resolution)
     settings.spotlight_index = 0
 
     # SCENES - press PGDN, PGUP to cycle through. basically, use Sprite or Animation.
-    # pos=(0,0), initial_scale=2; make 960 x 540 image.
+    # pos=(0,0), initial_scale=2; make 960 x 540 image for 1920x1080.
+    # SCENES are image files in /effects titled 001.png, 002.png, ..., 027.png etc.
     scene_files = os.listdir(os.path.dirname(os.path.realpath(__file__)) + "/effects/")
     largest_num = 0
     for filename in scene_files:
         if filename[:-4].isnumeric():
             largest_num = max(largest_num, int(filename[:-4]))
-    scenes = [sub_effects.Sprite(str(i) + ".png", initial_scale=2, fade_speed=2) for i in range(1,largest_num+1)]
+    scenes = [sub_effects.Sprite(str(i).zfill(3) + ".png", initial_scale=2, fade_speed=2) for i in range(1,largest_num+1)]
     scene_index = 0
 
     # rest of the generic settings
@@ -218,15 +281,28 @@ def main(settings, screen, renderer): # TODO: redesign fades.
         renderer.target = buffer
         renderer.clear()
 
+        # MOVER CLASSES.
+        # Here we first call all the movers to move.
+        for mover in movers:
+            mover.move()
+
         # DRAWING SECTION
-        for i, display in enumerate(displays): # flickering panels. bottom because 100% opaque.
+
+        # Flickering bottom layer images from a directory in /pics. Must be placed first because 100% opaque.
+        for i, display in enumerate(displays):
             display.give_textures().draw(dstrect=pos[i])
 
-        if settings.overlay_on: # draw overlay with transparency. needs alpha layer or will cover panels.
+        # Draw overlay with transparency. needs alpha layer or will cover panels.
+        if settings.overlay_on:
             settings.overlay.draw(dstrect=(0,0))
 
+        # If the effect cell is a list, iterate and draw, otherwise draw.
         for ef in effects:
-            if ef.opacity > 0:
+            if type(ef) == list:
+                if ef[0].opacity > 0:
+                    for component in ef:
+                        component.TEXTURE.draw(**component.update())
+            elif ef.opacity > 0:
                 ef.TEXTURE.draw(**ef.update())
 
         for scene in scenes:
@@ -236,6 +312,7 @@ def main(settings, screen, renderer): # TODO: redesign fades.
         if settings.spotlight.opacity > 0:
             settings.spotlight.draw()
 
+        # Text boxes are drawn last so that they are always visible.
         if text.text_alpha > 0 and text.message:
             for box in text.boxes:
                 box.alpha = text.box_alpha
@@ -247,14 +324,15 @@ def main(settings, screen, renderer): # TODO: redesign fades.
         # EVENT HANDLING SECTION
         for e in pygame.event.get():
 
+            # uncomment if using.
             # # spotlight controls with mouse
-            # if e.type == pygame.MOUSEBUTTONDOWN:
-            #     if e.button == 1: # left click
-            #         settings.spotlight.toggle()
-            #     elif e.button == 4: # scroll up (i think?)
-            #         settings.next_spotlight(1)
-            #     elif e.button == 5: # scroll down
-            #         settings.next_spotlight(-1)
+            if e.type == pygame.MOUSEBUTTONDOWN:
+                if e.button == 3: # right click
+                    settings.spotlight.toggle()
+                elif e.button == 4: # scroll up (i think?)
+                    settings.next_spotlight(1)
+                elif e.button == 5: # scroll down
+                    settings.next_spotlight(-1)
 
             if e.type == pygame.KEYDOWN:
 
@@ -270,7 +348,8 @@ def main(settings, screen, renderer): # TODO: redesign fades.
                     text_show ^= True
                     fade_time = 1 # access fades.
                 
-                elif e.key in (pygame.K_RIGHT, pygame.K_LEFT): # for setting larger scenes with fades.
+                # If you have large background images in 
+                elif e.key in (pygame.K_RIGHT, pygame.K_LEFT):
                     if not scenes:
                         print("There are no scenes set up.")
                         break
@@ -282,16 +361,20 @@ def main(settings, screen, renderer): # TODO: redesign fades.
                         scene_index = (scene_index - 1) % len(scenes)
                     scenes[scene_index].toggle()
 
-                elif e.key == pygame.K_a: # reload current text file. retain position.
+                elif e.key == pygame.K_t: # reload current text file. retain position.
                     text.read_messages()
                     print("Reloaded dialogue file.")
+
+                elif e.key == pygame.K_r: # reset positions of effects.
+                    for ef in effects:
+                        ef.reset()
 
                 elif e.key == pygame.K_d: # switch directory.
                     load_next_directory(text, settings)
                     displays, pos = create_displays(settings)
                     text_show = False
 
-                elif e.key == pygame.K_b: # enable overlay
+                elif e.key == pygame.K_b: # toggle overlay
                     settings.overlay_on ^= True
                     if not settings.overlay:
                         settings.render_overlay()
@@ -300,7 +383,7 @@ def main(settings, screen, renderer): # TODO: redesign fades.
                     settings.next_overlay(-1)
                     settings.render_overlay()
 
-                elif e.key == pygame.K_UP:
+                elif e.key == pygame.K_UP: # other direction overlay switch.
                     settings.next_overlay(1)
                     settings.render_overlay()
 
@@ -316,8 +399,11 @@ def main(settings, screen, renderer): # TODO: redesign fades.
                 # effect toggling. 1 to 9. 1 corresponds to 49.
                 elif e.key in {x+49 for x in range(0,10)} and effects:
                     try:
-                        effects[e.key-49].toggle()
-                        if effects[e.key-49].opacity > 0 and hasattr(effects[e.key-49], "move"):
+                        toggle_effects(effects[e.key-49])
+                        if type(effects[e.key-49]) == list:
+                            if effects[e.key-49][0].opacity > 0 and hasattr(effects[e.key-49], "move"):
+                                control_index = e.key - 49
+                        elif effects[e.key-49].opacity > 0 and hasattr(effects[e.key-49], "move"):
                             control_index = e.key - 49
                     except:
                         print(f"Not enough items in effects list.")
@@ -344,8 +430,8 @@ def main(settings, screen, renderer): # TODO: redesign fades.
 
             # recomputing various screensize aspects after resize
             elif e.type == pygame.VIDEORESIZE:
-                settings.x = ceil(screen.size[0] / settings.img_width)
-                settings.y = ceil(screen.size[1] / settings.img_height)
+                settings.x = math.ceil(screen.size[0] / settings.img_width)
+                settings.y = math.ceil(screen.size[1] / settings.img_height)
                 displays, pos = create_displays(settings)
                 settings.resolution = screen.size
                 buffer = pygame._sdl2.Texture(renderer, settings.resolution, target=True)
