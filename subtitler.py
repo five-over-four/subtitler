@@ -5,6 +5,7 @@ from random import randint
 from itertools import product
 import math
 import sub_effects
+import automatic_movers
 
 class Settings:
 
@@ -190,23 +191,6 @@ def create_displays(settings): # tiling via x-tile * y-tile DisplayFrame objects
     pos = [(0 + off[0] * settings.img_width, 0 + off[1] * settings.img_height) for off in offset]
     return displays, pos
 
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# CUSTOM MOVER CLASSES HERE. CREATE AN INSTANCE WITHIN MAIN AND CALL THEM INSIDE THE WHILE LOOP.  #
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-
-class Mover1: # sinusoidal vertical bob and weave.
-    def __init__(self, anim):
-        self.anim = anim
-        self.ref_pos = anim.pos # need a starting position.
-        self.angle = 0
-        self.speed = 0.001 # how many radians per frame
-        self.scale = 200 # amount moved at max
-
-    def move(self):
-        self.angle += self.speed
-        self.anim.pos = (self.ref_pos[0] + math.sin(math.pi*self.angle)*self.scale, self.ref_pos[1])
-        self.anim.theta = round(5*math.sin(20*self.angle))
-
 # sub_effects effects are stored in a list called 'effects' in main(): each cell is toggled via 1-9.
 # This function enables a cell to be a list of effects rather than a single effect, such as 
 # 100 sprites at once. This is why there are if type(effect) == list checks inside main().
@@ -240,17 +224,16 @@ def main(settings, screen, renderer): # TODO: redesign fades.
                 sub_effects.Animation("dice", frametime=15),
                 sub_effects.Sprite("gif_test.gif"),
                 [sub_effects.Animation("frontfist", frametime=30, pos=(600, 440), scale=1),
-sub_effects.Animation("frontfist", frametime=30, pos=(800, 440), scale=1),
-sub_effects.Animation("frontfist", frametime=30, pos=(600, 300), scale=0.7),
-sub_effects.Animation("frontfist", frametime=30, pos=(700, 300), scale=0.7),
-sub_effects.Animation("frontfist", frametime=30, pos=(950, 150), scale=0.4),
-sub_effects.Animation("frontfist", frametime=30, pos=(600, 150), scale=0.4)
+sub_effects.Animation("frontfist", frametime=30, pos=(300, 540), scale=1),
+sub_effects.Animation("frontfist", frametime=27, pos=(800, 400), scale=0.7),
+sub_effects.Animation("frontfist", frametime=24, pos=(350, 400), scale=0.7),
+sub_effects.Animation("frontfist", frametime=21, pos=(750, 250), scale=0.4),
+sub_effects.Animation("frontfist", frametime=18, pos=(500, 250), scale=0.4)
 ]
                 ]
 
-    # Custom mover class instances in this list. They can be used to move animations etc. around with specific
-    # paths that would be difficult to code in otherwise.
-    movers = [Mover1(effects[4])]
+    # Call mover classes from movers.py here and invoke them on specific entries of effects[].
+    movers = [automatic_movers.Mover1(effects[4])]
 
     settings.spotlight = sub_effects.Spotlight(os.listdir(settings.path + "spotlights/")[0], settings.resolution)
     settings.spotlight_index = 0
@@ -367,7 +350,13 @@ sub_effects.Animation("frontfist", frametime=30, pos=(600, 150), scale=0.4)
 
                 elif e.key == pygame.K_r: # reset positions of effects.
                     for ef in effects:
-                        ef.reset()
+                        if type(ef) == list:
+                            for component in ef:
+                                component.reset()
+                        else:
+                            ef.reset()
+                    for mover in movers:
+                        mover.reset()
 
                 elif e.key == pygame.K_d: # switch directory.
                     load_next_directory(text, settings)
